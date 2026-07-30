@@ -1,0 +1,11 @@
+ysyx_shared_state.json
+__pycache__/
+*.pyc
+*.log
+.tmp-browser-profile/
+.env
+
+# Local source files that are not used by the website.
+/1/
+/ICIL_logo.jpg
+/YSYX_logo.png

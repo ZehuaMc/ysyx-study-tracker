@@ -1,0 +1,3341 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>华南农业大学一生一芯学习小组×ICIL创芯实验室｜学习打卡</title>
+  <link rel="icon" href="assets/scau-emblem.png" type="image/png" />
+  <style>
+    :root {
+      --bg: #f4f7f3;
+      --panel: #ffffff;
+      --ink: #172019;
+      --muted: #627064;
+      --line: #dce5dd;
+      --brand: #1f7a4d;
+      --brand-strong: #145f3a;
+      --brand-soft: #e7f4ec;
+      --amber: #b7791f;
+      --amber-soft: #fff5df;
+      --red: #b42318;
+      --red-soft: #fff1f0;
+      --shadow: 0 16px 48px rgba(28, 66, 44, 0.12);
+      --radius: 8px;
+      color-scheme: light;
+      font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans SC", Arial, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      overflow-x: hidden;
+      background:
+        linear-gradient(135deg, rgba(31, 122, 77, 0.08), transparent 36%),
+        radial-gradient(circle at 85% 8%, rgba(183, 121, 31, 0.12), transparent 24%),
+        var(--bg);
+      color: var(--ink);
+    }
+
+    button,
+    input,
+    textarea,
+    select {
+      font: inherit;
+    }
+
+    button {
+      border: 0;
+      cursor: pointer;
+      transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+    }
+
+    button:active {
+      transform: translateY(1px);
+    }
+
+    button:disabled,
+    input:disabled,
+    textarea:disabled,
+    select:disabled {
+      cursor: not-allowed;
+      opacity: 0.58;
+    }
+
+    .shell {
+      width: min(1180px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 28px 0 36px;
+    }
+
+    .login-screen {
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding-top: 24px;
+      padding-bottom: 24px;
+    }
+
+    .login-screen[hidden],
+    #appShell[hidden],
+    #adminShell[hidden] {
+      display: none !important;
+    }
+
+    .login-panel {
+      width: min(760px, 100%);
+      padding: 32px;
+      background: rgba(255, 255, 255, 0.95);
+      border: 1px solid rgba(220, 229, 221, 0.9);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .login-heading {
+      margin-bottom: 24px;
+    }
+
+    .brand-lockup {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 14px;
+    }
+
+    .brand-logo-rail {
+      display: flex;
+      flex-wrap: nowrap;
+      align-items: center;
+      gap: 12px;
+      flex: 0 0 auto;
+      min-height: 92px;
+      padding: 7px;
+      border: 1px solid rgba(31, 122, 77, 0.18);
+      border-radius: var(--radius);
+      background: rgba(255, 255, 255, 0.86);
+      box-shadow: 0 8px 22px rgba(20, 95, 58, 0.08);
+    }
+
+    .brand-logo {
+      display: block;
+      width: 76px;
+      height: 76px;
+      object-fit: contain;
+    }
+
+    .brand-logo--ysyx {
+      width: 76px;
+      height: 70px;
+    }
+
+    .brand-logo-connector {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex: 0 0 auto;
+      width: 18px;
+      color: var(--brand-strong);
+      font-size: 24px;
+      font-weight: 800;
+      line-height: 1;
+    }
+
+    .brand-logo--icil {
+      width: 96px;
+      height: 52px;
+      object-fit: cover;
+      object-position: center;
+    }
+
+    .brand-copy {
+      display: grid;
+      gap: 7px;
+      min-width: 0;
+      flex: 1 1 240px;
+    }
+
+    .brand-affiliation {
+      color: var(--brand-strong);
+      font-size: 14px;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+    }
+
+    .brand-copy .eyebrow {
+      width: fit-content;
+      max-width: 100%;
+      margin: 0;
+      line-height: 1.4;
+    }
+
+    .login-heading h1 {
+      margin-bottom: 12px;
+      font-size: clamp(30px, 5vw, 48px);
+      overflow-wrap: anywhere;
+      word-break: break-all;
+    }
+
+    .login-heading p {
+      max-width: 620px;
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+
+    .login-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.15fr) minmax(240px, 0.85fr);
+      gap: 16px;
+      align-items: stretch;
+    }
+
+    .login-box {
+      display: grid;
+      gap: 12px;
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fbfdfb;
+    }
+
+    .login-box h2 {
+      margin: 0;
+      font-size: 18px;
+    }
+
+    .login-box p {
+      margin: -3px 0 2px;
+      color: var(--muted);
+      line-height: 1.5;
+      font-size: 13px;
+    }
+
+    .login-box .auth-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .register-fields {
+      display: grid;
+      gap: 8px;
+      grid-column: 1 / -1;
+    }
+
+    .register-fields[hidden] {
+      display: none;
+    }
+
+    .login-box .auth-actions {
+      margin-top: 2px;
+    }
+
+    .login-box .btn {
+      flex: 1;
+    }
+
+    .password-visibility {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      width: fit-content;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.4;
+      cursor: pointer;
+    }
+
+    .password-visibility input {
+      width: 15px;
+      height: 15px;
+      margin: 0;
+      accent-color: var(--brand);
+    }
+
+    .login-footnote {
+      margin: 20px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1.4fr) minmax(300px, 0.6fr);
+      gap: 20px;
+      align-items: stretch;
+      margin-bottom: 22px;
+    }
+
+    .title-panel,
+    .week-panel,
+    .card {
+      background: rgba(255, 255, 255, 0.92);
+      border: 1px solid rgba(220, 229, 221, 0.86);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .title-panel {
+      padding: 28px;
+      min-height: 210px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .hero-timer {
+      position: relative;
+      z-index: 1;
+      margin-top: 22px;
+      max-width: 620px;
+    }
+
+    .hero-timer-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 9px;
+      color: #244333;
+    }
+
+    .hero-timer .timer-face {
+      margin: 0;
+    }
+
+    .hero-timer .progress-wrap {
+      margin: 10px 0 0;
+    }
+
+    .title-panel::after {
+      content: "";
+      position: absolute;
+      inset: auto -70px -95px auto;
+      width: 250px;
+      height: 250px;
+      border: 42px solid rgba(31, 122, 77, 0.09);
+      border-radius: 50%;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      width: fit-content;
+      gap: 8px;
+      align-items: center;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: var(--brand-soft);
+      color: var(--brand-strong);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    h1 {
+      margin: 18px 0 10px;
+      font-size: clamp(30px, 5vw, 54px);
+      line-height: 1.05;
+      letter-spacing: 0;
+    }
+
+    .title-panel h1 {
+      font-size: 46px;
+      line-height: 1.12;
+      overflow-wrap: anywhere;
+      word-break: break-all;
+    }
+
+    .subtitle {
+      max-width: 720px;
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.75;
+      font-size: 16px;
+    }
+
+    .week-panel {
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .week-main {
+      border-radius: var(--radius);
+      background: #163c2a;
+      color: #fff;
+      padding: 18px;
+      min-height: 116px;
+    }
+
+    .week-main span {
+      display: block;
+      color: rgba(255, 255, 255, 0.74);
+      font-size: 13px;
+      margin-bottom: 8px;
+    }
+
+    .week-main strong {
+      font-size: 28px;
+      line-height: 1.15;
+      letter-spacing: 0;
+    }
+
+    .user-row,
+    .inline-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .auth-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .auth-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .field,
+    textarea,
+    select {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fff;
+      color: var(--ink);
+      padding: 11px 12px;
+      outline: none;
+    }
+
+    textarea {
+      min-height: 96px;
+      resize: vertical;
+      line-height: 1.65;
+    }
+
+    .field:focus,
+    textarea:focus,
+    select:focus {
+      border-color: rgba(31, 122, 77, 0.72);
+      box-shadow: 0 0 0 3px rgba(31, 122, 77, 0.12);
+    }
+
+    .btn {
+      min-height: 42px;
+      padding: 0 15px;
+      border-radius: var(--radius);
+      background: var(--brand);
+      color: #fff;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .btn:hover:not(:disabled) {
+      background: var(--brand-strong);
+      box-shadow: 0 8px 20px rgba(31, 122, 77, 0.22);
+    }
+
+    .btn.secondary {
+      background: #edf3ef;
+      color: #244333;
+    }
+
+    .btn.secondary:hover:not(:disabled) {
+      background: #dde9e1;
+      box-shadow: none;
+    }
+
+    .btn.warning {
+      background: var(--amber);
+    }
+
+    .btn.danger {
+      background: var(--red);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 24px;
+      align-items: start;
+    }
+
+    .stack {
+      display: grid;
+      gap: 24px;
+    }
+
+    .card {
+      padding: 20px;
+    }
+
+    .feature-card {
+      padding: 26px;
+    }
+
+    .roster-card {
+      margin-bottom: 20px;
+    }
+
+    .admin-card {
+      margin-bottom: 20px;
+    }
+
+    #adminShell .admin-card {
+      margin: 0;
+    }
+
+    .admin-tools {
+      display: grid;
+      grid-template-columns: minmax(220px, 1fr) auto auto;
+      gap: 10px;
+      align-items: center;
+      margin: 14px 0;
+    }
+
+    .admin-account-actions {
+      margin: 14px 0;
+    }
+
+    .admin-data-heading {
+      align-items: center;
+      margin: 16px 0 10px;
+    }
+
+    .admin-sort-control {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 5px;
+      padding: 4px;
+      margin-bottom: 14px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #f4f7f3;
+    }
+
+    .admin-sort-button {
+      min-height: 40px;
+      padding: 0 10px;
+      border-radius: 6px;
+      background: transparent;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .admin-sort-button:hover:not(:disabled) {
+      background: #e7f0e9;
+      color: var(--brand-strong);
+    }
+
+    .admin-sort-button.active {
+      background: #fff;
+      color: var(--brand-strong);
+      box-shadow: 0 2px 8px rgba(28, 66, 44, 0.12);
+    }
+
+    .admin-detail-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 20;
+      display: grid;
+      place-items: center;
+      padding: 20px;
+      background: rgba(23, 32, 25, 0.48);
+    }
+
+    .admin-detail-modal[hidden] {
+      display: none;
+    }
+
+    .admin-detail-dialog {
+      width: min(980px, 100%);
+      max-height: min(88vh, 900px);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: 0 24px 70px rgba(23, 32, 25, 0.28);
+    }
+
+    .admin-detail-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: flex-start;
+      padding: 20px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .admin-detail-header h2 {
+      margin: 0;
+      font-size: 22px;
+    }
+
+    .admin-detail-header p {
+      margin: 6px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .admin-detail-content {
+      overflow: auto;
+      padding: 20px;
+    }
+
+    .admin-detail-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 18px;
+    }
+
+    .admin-detail-stat {
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #f8fbf9;
+    }
+
+    .admin-detail-stat span {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      margin-bottom: 5px;
+    }
+
+    .admin-detail-stat strong {
+      display: block;
+      color: var(--brand-strong);
+      font-size: 18px;
+    }
+
+    .admin-detail-section {
+      margin-top: 18px;
+    }
+
+    .admin-detail-section h3 {
+      margin: 0 0 9px;
+      font-size: 17px;
+    }
+
+    .admin-detail-list {
+      display: grid;
+      gap: 8px;
+    }
+
+    .admin-detail-item {
+      padding: 11px 12px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fff;
+      line-height: 1.55;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+
+    .admin-detail-item .meta {
+      margin-top: 5px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .admin-time-form {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr)) auto;
+      gap: 10px;
+      align-items: end;
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #f8fbf9;
+    }
+
+    .admin-time-form label {
+      display: grid;
+      gap: 6px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .admin-time-form .notice {
+      grid-column: 1 / -1;
+      margin: 0;
+    }
+
+    .admin-time-records {
+      display: grid;
+      margin-top: 10px;
+      border-top: 1px solid var(--line);
+    }
+
+    .admin-time-record-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 12px;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid #edf1ee;
+    }
+
+    .admin-time-record-row:last-child {
+      border-bottom: 0;
+      padding-bottom: 0;
+    }
+
+    .admin-study-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      white-space: nowrap;
+    }
+
+    .admin-study-status::before {
+      content: "";
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #9aa69e;
+    }
+
+    .admin-study-status.active {
+      color: var(--brand-strong);
+      font-weight: 700;
+    }
+
+    .admin-study-status.active::before {
+      background: #2e9b59;
+      box-shadow: 0 0 0 3px rgba(46, 155, 89, 0.14);
+    }
+
+    .table-wrap {
+      width: 100%;
+      overflow-x: auto;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+    }
+
+    .roster-table {
+      width: 100%;
+      min-width: 760px;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 13px;
+    }
+
+    .roster-table th {
+      padding: 11px 12px;
+      color: var(--muted);
+      background: #f8fbf9;
+      border-bottom: 1px solid var(--line);
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .roster-table td {
+      padding: 12px;
+      border-bottom: 1px solid #edf1ee;
+      vertical-align: middle;
+    }
+
+    .roster-table tbody tr:last-child td {
+      border-bottom: 0;
+    }
+
+    .roster-table tbody tr:hover {
+      background: #fbfdfb;
+    }
+
+    .roster-table tbody tr.selected {
+      background: var(--brand-soft);
+    }
+
+    .roster-table .progress-cell {
+      max-width: 280px;
+      color: #344b3a;
+      line-height: 1.5;
+    }
+
+    .roster-heading-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      justify-content: flex-end;
+    }
+
+    .student-roster-panel[hidden] {
+      display: none;
+    }
+
+    .section-title {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: flex-start;
+      margin-bottom: 20px;
+    }
+
+    .section-title h2 {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 0;
+      font-size: 22px;
+      line-height: 1.25;
+    }
+
+    .section-mark,
+    .subsection-mark {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex: 0 0 auto;
+      border-radius: 8px;
+      font-weight: 800;
+      letter-spacing: 0;
+    }
+
+    .section-mark {
+      width: 36px;
+      height: 36px;
+      background: var(--brand-soft);
+      color: var(--brand-strong);
+      font-size: 19px;
+    }
+
+    .subsection-mark {
+      min-width: 44px;
+      padding: 4px 9px;
+      margin-right: 8px;
+      background: #ecf4ee;
+      color: var(--brand-strong);
+      font-size: 13px;
+      vertical-align: middle;
+    }
+
+    .subsection-mark.question {
+      background: var(--amber-soft);
+      color: #754d13;
+    }
+
+    .section-title p {
+      margin: 7px 0 0;
+      color: var(--muted);
+      line-height: 1.6;
+      font-size: 14px;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 9px;
+      border-radius: 999px;
+      background: #eef5f0;
+      color: var(--brand-strong);
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .pill.amber {
+      background: var(--amber-soft);
+      color: var(--amber);
+    }
+
+    .pill.red {
+      background: var(--red-soft);
+      color: var(--red);
+    }
+
+    .notice {
+      padding: 11px 12px;
+      border-radius: var(--radius);
+      background: #f8fbf9;
+      border: 1px dashed #c9d8ce;
+      color: #3c4c40;
+      line-height: 1.55;
+      font-size: 14px;
+    }
+
+    .notice.warning {
+      background: var(--amber-soft);
+      border-color: #f0d59a;
+      color: #754d13;
+    }
+
+    .sync-status {
+      font-size: 12px;
+      padding: 8px 10px;
+    }
+
+    .sync-status.online {
+      background: var(--brand-soft);
+      border-color: #b9ddc5;
+      color: var(--brand-strong);
+    }
+
+    .sync-status.offline {
+      background: #f5f6f5;
+      border-color: #d7ddd8;
+      color: var(--muted);
+    }
+
+    .timer-face {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 12px;
+      align-items: center;
+      margin: 14px 0;
+      padding: 14px;
+      border-radius: var(--radius);
+      background: #163c2a;
+      color: #fff;
+    }
+
+    .timer-face small {
+      display: block;
+      color: rgba(255, 255, 255, 0.72);
+      margin-bottom: 6px;
+    }
+
+    .timer-face b {
+      font-size: clamp(28px, 5vw, 44px);
+      letter-spacing: 0;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .progress-wrap {
+      display: grid;
+      gap: 7px;
+      margin: 14px 0;
+    }
+
+    .progress-label {
+      display: flex;
+      justify-content: space-between;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .bar {
+      height: 12px;
+      border-radius: 999px;
+      background: #e4ece7;
+      overflow: hidden;
+    }
+
+    .bar span {
+      display: block;
+      height: 100%;
+      width: 0%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #1f7a4d, #58a66f);
+      transition: width 0.25s ease;
+    }
+
+    .record-list,
+    .note-list,
+    .question-list {
+      display: grid;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .record,
+    .note,
+    .question {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 12px;
+      background: #fff;
+    }
+
+    .record {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .record strong,
+    .question strong,
+    .note strong {
+      display: block;
+      margin-bottom: 5px;
+      line-height: 1.4;
+    }
+
+    .meta {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.55;
+    }
+
+    .empty {
+      border: 1px dashed #c9d8ce;
+      color: var(--muted);
+      background: #fbfdfb;
+      border-radius: var(--radius);
+      padding: 14px;
+      text-align: center;
+      line-height: 1.6;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .stat {
+      padding: 12px;
+      border-radius: var(--radius);
+      border: 1px solid var(--line);
+      background: #fbfdfb;
+    }
+
+    .stat span {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      margin-bottom: 6px;
+    }
+
+    .stat strong {
+      font-size: 22px;
+      line-height: 1.2;
+    }
+
+    .divider {
+      height: 1px;
+      background: var(--line);
+      margin: 16px 0;
+    }
+
+    .progress-top {
+      display: grid;
+      gap: 10px;
+      padding: 14px;
+      background: #f8fbf9;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      margin-bottom: 14px;
+    }
+
+    .progress-display {
+      min-height: 52px;
+      white-space: pre-wrap;
+      line-height: 1.65;
+      color: #263b2d;
+    }
+
+    .locked-panel {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      gap: 10px;
+      align-items: start;
+      padding: 12px;
+      border: 1px solid #e8d6a9;
+      background: var(--amber-soft);
+      color: #735116;
+      border-radius: var(--radius);
+      font-size: 14px;
+      line-height: 1.55;
+      margin-bottom: 14px;
+    }
+
+    .note-body,
+    .question-body,
+    .reply {
+      color: #263b2d;
+      line-height: 1.7;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .note-actions,
+    .question-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .mini-btn {
+      min-height: 30px;
+      padding: 0 10px;
+      border-radius: 6px;
+      background: #edf3ef;
+      color: #244333;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .mini-btn.danger {
+      background: var(--red-soft);
+      color: var(--red);
+    }
+
+    .reply-list {
+      display: grid;
+      gap: 8px;
+      margin-top: 10px;
+      padding-left: 12px;
+      border-left: 3px solid #e5eee8;
+    }
+
+    .reply {
+      padding: 9px 10px;
+      border-radius: 6px;
+      background: #f8fbf9;
+    }
+
+    .split-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 26px;
+    }
+
+    .split-grid > section + section {
+      padding-top: 26px;
+      border-top: 1px solid var(--line);
+    }
+
+    .split-grid h3 {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      margin: 0 0 16px;
+      font-size: 18px;
+    }
+
+    .form-grid {
+      display: grid;
+      gap: 10px;
+    }
+
+    .readonly-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--muted);
+      font-size: 13px;
+      margin: -4px 0 10px;
+    }
+
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 24px;
+      transform: translateX(-50%) translateY(20px);
+      opacity: 0;
+      pointer-events: none;
+      max-width: min(520px, calc(100% - 32px));
+      padding: 12px 14px;
+      border-radius: var(--radius);
+      background: #172019;
+      color: #fff;
+      box-shadow: 0 16px 42px rgba(0, 0, 0, 0.22);
+      transition: opacity 0.2s ease, transform 0.2s ease;
+      z-index: 10;
+      line-height: 1.45;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    .footer {
+      margin-top: 18px;
+      color: var(--muted);
+      font-size: 13px;
+      text-align: center;
+      line-height: 1.6;
+    }
+
+    @media (max-width: 920px) {
+      .hero,
+      .grid,
+      .split-grid,
+      .login-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 620px) {
+      .shell {
+        width: min(100% - 20px, 1180px);
+        padding-top: 16px;
+      }
+
+      .title-panel,
+      .week-panel,
+      .card,
+      .login-panel {
+        padding: 16px;
+      }
+
+      .title-panel h1 {
+        font-size: 34px;
+      }
+
+      .brand-lockup {
+        align-items: flex-start;
+        gap: 12px;
+      }
+
+      .brand-logo {
+        width: 62px;
+        height: 62px;
+      }
+
+      .brand-logo--ysyx {
+        width: 66px;
+        height: 60px;
+      }
+
+      .brand-logo-connector {
+        width: 14px;
+        font-size: 20px;
+      }
+
+      .brand-logo--icil {
+        width: 82px;
+        height: 45px;
+      }
+
+      .brand-affiliation {
+        font-size: 12px;
+      }
+
+      .login-heading h1,
+      .title-panel h1 {
+        max-width: 100%;
+        font-size: 26px;
+        line-height: 1.18;
+      }
+
+      .mobile-title-line {
+        display: block;
+        margin-left: 0;
+        text-align: left;
+        text-indent: 0;
+      }
+
+      .login-heading h1 > span,
+      .title-panel h1 > span {
+        display: block;
+      }
+
+      .login-heading p,
+      .subtitle,
+      .login-box p {
+        overflow-wrap: anywhere;
+      }
+
+      .login-box .auth-actions {
+        display: grid;
+        grid-template-columns: 1fr;
+      }
+
+      .login-box .btn {
+        width: 100%;
+      }
+
+      .stats-grid,
+      .timer-face,
+      .auth-grid,
+      .admin-tools,
+      .admin-sort-control,
+      .user-row,
+      .inline-row,
+      .record {
+        grid-template-columns: 1fr;
+      }
+
+      .admin-detail-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .admin-time-form,
+      .admin-time-record-row {
+        grid-template-columns: 1fr;
+      }
+
+      .admin-detail-dialog {
+        max-height: 92vh;
+      }
+
+      .admin-detail-header {
+        align-items: center;
+      }
+
+      .timer-face .btn {
+        width: 100%;
+      }
+
+      .section-title {
+        display: grid;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main id="loginScreen" class="shell login-screen">
+    <section class="login-panel" aria-labelledby="loginTitle">
+      <div class="login-heading">
+        <div class="brand-lockup">
+          <div class="brand-logo-rail" aria-label="组织标识">
+            <img class="brand-logo" src="assets/scau-emblem.png" alt="华南农业大学校徽" width="76" height="76" />
+            <img class="brand-logo brand-logo--icil" src="assets/ICIL_logo.jpg" alt="ICIL创芯实验室标志" width="96" height="52" />
+            <span class="brand-logo-connector" aria-hidden="true">×</span>
+            <img class="brand-logo brand-logo--ysyx" src="assets/YSYX_logo.png" alt="一生一芯标志" width="76" height="70" />
+          </div>
+          <div class="brand-copy">
+            <span class="brand-affiliation">华南农业大学</span>
+            <span class="eyebrow">一生一芯学习小组 × ICIL 创芯实验室</span>
+          </div>
+        </div>
+        <h1 id="loginTitle"><span>华南农业大学</span><span class="mobile-title-line">一生一芯学习打卡</span></h1>
+        <p>登录后进入本周打卡、学习随记和同学交流页面。管理员使用配置的账号和密码进入独立后台。</p>
+      </div>
+      <div class="login-grid">
+        <section class="login-box" aria-labelledby="studentLoginTitle">
+          <div>
+            <h2 id="studentLoginTitle">学生登录</h2>
+            <p>登录只校验已注册的手机号和密码；姓名与班级仅在注册新账号时填写。</p>
+          </div>
+          <div class="auth-grid">
+            <input id="phoneInput" class="field" type="tel" inputmode="numeric" autocomplete="tel" placeholder="手机号" />
+            <input id="passwordInput" class="field" type="password" autocomplete="current-password" placeholder="密码（至少6位）" />
+            <div id="studentRegisterFields" class="register-fields" hidden>
+              <input id="confirmPassword" class="field" type="password" autocomplete="new-password" placeholder="再次输入密码" aria-label="再次输入密码" />
+              <input id="studentName" class="field" type="text" autocomplete="name" placeholder="真实姓名" />
+              <input id="className" class="field" type="text" autocomplete="organization-title" placeholder="班级" />
+            </div>
+          </div>
+          <label class="password-visibility" for="showStudentPasswords">
+            <input id="showStudentPasswords" type="checkbox" />
+            <span>显示密码</span>
+          </label>
+          <div class="auth-actions">
+            <button id="loginButton" class="btn" type="button">登录并进入打卡</button>
+            <button id="showRegisterButton" class="btn secondary" type="button">注册新账号</button>
+            <button id="registerButton" class="btn" type="button" hidden>创建账号并进入</button>
+            <button id="cancelRegisterButton" class="btn secondary" type="button" hidden>返回登录</button>
+          </div>
+          <div id="authHint" class="notice">登录后才能编辑自己的打卡，并参与共享提问。</div>
+        </section>
+
+        <section class="login-box" aria-labelledby="adminLoginTitle">
+          <div>
+            <h2 id="adminLoginTitle">管理员入口</h2>
+            <p>使用服务器配置的管理员账号和密码进入账号管理与数据导出后台。</p>
+          </div>
+          <input id="adminUsername" class="field" type="text" autocomplete="username" placeholder="管理员账号" />
+          <input id="adminPassword" class="field" type="password" autocomplete="current-password" placeholder="管理员密码" />
+          <label class="password-visibility" for="showAdminPassword">
+            <input id="showAdminPassword" type="checkbox" />
+            <span>显示密码</span>
+          </label>
+          <div class="auth-actions">
+            <button id="adminLoginButton" class="btn" type="button">进入管理后台</button>
+          </div>
+        </section>
+      </div>
+      <p class="login-footnote">账号密码仅用于本学习系统登录。学生只能修改自己的打卡、进度和随记，查看他人时可提问和回复。</p>
+    </section>
+  </main>
+
+  <main id="appShell" class="shell" hidden>
+    <div id="studentContent">
+    <section class="hero">
+      <div class="title-panel">
+        <div>
+          <div class="brand-lockup">
+            <div class="brand-logo-rail" aria-label="组织标识">
+              <img class="brand-logo" src="assets/scau-emblem.png" alt="华南农业大学校徽" width="76" height="76" />
+              <img class="brand-logo brand-logo--icil" src="assets/ICIL_logo.jpg" alt="ICIL创芯实验室标志" width="96" height="52" />
+              <span class="brand-logo-connector" aria-hidden="true">×</span>
+              <img class="brand-logo brand-logo--ysyx" src="assets/YSYX_logo.png" alt="一生一芯标志" width="76" height="70" />
+            </div>
+            <div class="brand-copy">
+              <span class="brand-affiliation">华南农业大学</span>
+              <span class="eyebrow">一生一芯学习小组 × ICIL 创芯实验室</span>
+            </div>
+          </div>
+          <h1><span>华南农业大学</span><span class="mobile-title-line">一生一芯学习打卡</span></h1>
+          <p class="subtitle">
+            以时间打卡为主，记录每次学习时段，并自动累计本周、当天与全部学习时间。
+          </p>
+        </div>
+        <div class="hero-timer">
+          <div class="hero-timer-head">
+            <strong>本周时间打卡</strong>
+            <span id="timeBadge" class="pill">本周目标 15h</span>
+          </div>
+          <div class="timer-face">
+            <div>
+              <small id="timerLabel">当前未开始</small>
+              <b id="timerDisplay">00:00:00</b>
+            </div>
+            <button id="timerButton" class="btn">开始打卡</button>
+          </div>
+          <div class="progress-wrap">
+            <div class="progress-label">
+              <span id="timeTotal">已累计 0h</span>
+              <span id="timePercent">0%</span>
+            </div>
+            <div class="bar" aria-hidden="true"><span id="timeBar"></span></div>
+          </div>
+        </div>
+      </div>
+
+      <aside class="week-panel">
+        <div class="week-main">
+          <span>本周周期</span>
+          <strong id="weekRange">加载中</strong>
+        </div>
+        <div class="auth-actions">
+          <button id="logoutButton" class="btn danger" type="button">退出登录</button>
+        </div>
+        <div id="profileContext" class="notice">当前查看：未选择学习者</div>
+        <button id="returnMyProfile" class="btn secondary" type="button" hidden>返回我的主页</button>
+        <div class="notice">
+          当前用户只能编辑自己的记录，查看其他同学时可阅读进度并提交问题。
+        </div>
+        <div id="syncStatus" class="notice sync-status offline">单机模式：数据只保存在当前浏览器</div>
+      </aside>
+    </section>
+
+    <section class="card roster-card" aria-labelledby="rosterTitle">
+      <div class="section-title">
+        <div>
+          <h2 id="rosterTitle">学习者概览</h2>
+          <p>查看所有人的本周学习情况，选择一行进入对应学习界面并提出问题。</p>
+        </div>
+        <div class="roster-heading-actions">
+          <button id="rosterToggle" class="btn secondary" type="button" aria-expanded="false" aria-controls="studentRosterPanel">展开列表</button>
+          <span class="pill">实时列表</span>
+        </div>
+      </div>
+      <div id="studentRosterPanel" class="student-roster-panel" hidden>
+        <div class="table-wrap">
+          <table class="roster-table">
+            <thead>
+              <tr>
+                <th>学习者</th>
+                <th>当前进度</th>
+                <th>本周时间</th>
+                <th>全部时间</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="studentRoster"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section class="grid">
+      <div class="stack">
+        <section class="card feature-card" aria-labelledby="timeTitle">
+          <div class="section-title">
+            <div>
+              <h2 id="timeTitle"><span class="section-mark" aria-hidden="true">时</span>时间打卡</h2>
+              <p>记录每次开始、结束和单次学习时长；次数不限，自动累计本周总时长与全部学习总时长。</p>
+            </div>
+            <span class="pill">15h / 周</span>
+          </div>
+
+          <div class="stats-grid">
+            <div class="stat">
+              <span>本周总学习时间</span>
+              <strong id="weekTimeTotal">0h</strong>
+            </div>
+            <div class="stat">
+              <span>全部累计学习时间</span>
+              <strong id="allTimeTotal">0h</strong>
+            </div>
+          </div>
+
+          <div id="timeRecords" class="record-list"></div>
+
+          <div class="divider"></div>
+          <div class="section-title">
+            <div>
+              <h3>每周学习时间</h3>
+              <p>按周保留历史累计，方便查看长期学习投入。</p>
+            </div>
+          </div>
+          <div id="weeklyHistory" class="record-list"></div>
+        </section>
+
+        <section class="card feature-card" aria-labelledby="notesTitle">
+          <div class="section-title">
+            <div>
+              <h2 id="notesTitle"><span class="section-mark" aria-hidden="true">记</span>随记功能</h2>
+              <p>自己的记录与他人的提问分区展示；同学只能在提问区交流，不能改动你的个人记录。</p>
+            </div>
+            <span class="pill">实时记录</span>
+          </div>
+
+          <div class="split-grid">
+            <section aria-labelledby="ownTitle">
+              <h3 id="ownTitle"><span class="subsection-mark" aria-hidden="true">记录</span>自己的记录</h3>
+              <div class="progress-top">
+                <strong>当前详细进度</strong>
+                <div id="progressDisplay" class="progress-display">还没有填写进度。</div>
+                <textarea id="progressInput" placeholder="写下你当前的详细进度：完成到哪一节、正在卡在哪个 bug、下一步准备做什么……"></textarea>
+                <button id="saveProgress" class="btn" type="button">更新进度</button>
+              </div>
+
+              <form id="noteForm" class="form-grid">
+                <select id="noteType" aria-label="随记类型">
+                  <option value="学习总结">学习总结</option>
+                  <option value="Bug 记录">Bug 记录</option>
+                  <option value="感悟">感悟</option>
+                  <option value="必做题记录">必做题记录</option>
+                </select>
+                <textarea id="noteText" placeholder="完成必做题后及时记录：思路、坑点、修复过程、复盘结论……"></textarea>
+                <button class="btn" type="submit">添加随记</button>
+              </form>
+
+              <div id="noteList" class="note-list"></div>
+            </section>
+
+            <section aria-labelledby="questionTitle">
+              <h3 id="questionTitle"><span class="subsection-mark question" aria-hidden="true">交流</span>他人提问</h3>
+              <div class="locked-panel">
+                <span aria-hidden="true">🔒</span>
+                <span id="questionHelpText">你可以收到来自其他同学的提问。</span>
+              </div>
+
+              <form id="questionForm" class="form-grid">
+                <textarea id="questionText" placeholder="写下你遇到的问题，可以附上阶段、现象、报错信息或尝试过的方法。"></textarea>
+                <button class="btn" type="submit">提交问题</button>
+              </form>
+
+              <div id="questionList" class="question-list"></div>
+            </section>
+          </div>
+        </section>
+      </div>
+    </section>
+
+      <p class="footer">华南农业大学一生一芯学习小组×ICIL创芯实验室 · 支持时间打卡、学习随记、提问与回复</p>
+    </div>
+  </main>
+
+  <main id="adminShell" class="shell" hidden>
+    <section id="adminSection" class="card admin-card" aria-labelledby="adminTitle">
+      <div class="section-title">
+        <div>
+          <h1 id="adminTitle">后台管理</h1>
+          <p>管理员可查看账号资料、重置密码、注销账号并导出学习时长汇总。密码只保存哈希，后台不可查看明文。</p>
+        </div>
+        <span class="pill amber">管理员</span>
+      </div>
+      <div class="auth-actions">
+        <button id="adminLogoutButton" class="btn secondary" type="button">退出后台</button>
+      </div>
+      <div id="adminHint" class="notice">管理员账号和密码由服务器环境变量 ADMIN_USERNAME、ADMIN_PASSWORD 配置。</div>
+      <div id="adminPanel" hidden>
+        <div class="auth-actions admin-account-actions">
+          <button id="refreshAdmin" class="btn secondary" type="button">刷新后台数据</button>
+        </div>
+        <div class="table-wrap">
+          <table class="roster-table admin-table">
+            <thead>
+              <tr>
+                <th>手机号</th>
+                <th>姓名</th>
+                <th>班级</th>
+                <th>密码状态</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="adminUserRows"></tbody>
+          </table>
+        </div>
+        <div class="divider"></div>
+        <div class="section-title admin-data-heading">
+          <div>
+            <h2>学习时长与导出</h2>
+            <p id="adminSortHint">当前按总学习时长从高到低排列</p>
+          </div>
+          <button id="exportData" class="btn" type="button">导出 CSV</button>
+        </div>
+        <div id="adminSortControl" class="admin-sort-control" role="group" aria-label="学习时长排序方式">
+          <button class="admin-sort-button active" data-admin-sort="total" type="button" aria-pressed="true">总学习时长 ↓</button>
+          <button class="admin-sort-button" data-admin-sort="week" type="button" aria-pressed="false">本周学习时长 ↓</button>
+          <button class="admin-sort-button" data-admin-sort="day" type="button" aria-pressed="false">本日学习时长 ↓</button>
+        </div>
+        <div class="table-wrap">
+          <table class="roster-table admin-table">
+            <thead>
+              <tr>
+                <th>姓名</th>
+                <th>班级</th>
+                <th>总学习时长</th>
+                <th>本周学习时长</th>
+                <th>本日学习时长</th>
+                <th>当前状态</th>
+                <th>详情</th>
+              </tr>
+            </thead>
+            <tbody id="adminExportRows"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div id="adminDetailModal" class="admin-detail-modal" hidden>
+    <section class="admin-detail-dialog" role="dialog" aria-modal="true" aria-labelledby="adminDetailTitle">
+      <div class="admin-detail-header">
+        <div>
+          <h2 id="adminDetailTitle">学生详情</h2>
+          <p id="adminDetailMeta">正在加载……</p>
+        </div>
+        <button id="closeAdminDetail" class="btn secondary" type="button">关闭</button>
+      </div>
+      <div id="adminDetailContent" class="admin-detail-content">
+        <div class="empty">选择一名学生查看详情。</div>
+      </div>
+    </section>
+  </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    const STORAGE_KEY = "scau_ysyx_checkin_v1";
+    const AUTH_TOKEN_KEY = "scau_ysyx_auth_token_v1";
+    const ADMIN_TOKEN_KEY = "scau_ysyx_admin_token_v1";
+    const WEEKLY_TARGET_MS = 15 * 60 * 60 * 1000;
+    const $ = (id) => document.getElementById(id);
+
+    const els = {
+      loginScreen: $("loginScreen"),
+      appShell: $("appShell"),
+      adminShell: $("adminShell"),
+      studentContent: $("studentContent"),
+      adminSection: $("adminSection"),
+      weekRange: $("weekRange"),
+      phoneInput: $("phoneInput"),
+      passwordInput: $("passwordInput"),
+      confirmPassword: $("confirmPassword"),
+      showStudentPasswords: $("showStudentPasswords"),
+      studentName: $("studentName"),
+      className: $("className"),
+      studentRegisterFields: $("studentRegisterFields"),
+      loginButton: $("loginButton"),
+      showRegisterButton: $("showRegisterButton"),
+      registerButton: $("registerButton"),
+      cancelRegisterButton: $("cancelRegisterButton"),
+      logoutButton: $("logoutButton"),
+      profileContext: $("profileContext"),
+      returnMyProfile: $("returnMyProfile"),
+      authHint: $("authHint"),
+      studentRoster: $("studentRoster"),
+      studentRosterPanel: $("studentRosterPanel"),
+      rosterToggle: $("rosterToggle"),
+      timerLabel: $("timerLabel"),
+      timerDisplay: $("timerDisplay"),
+      timerButton: $("timerButton"),
+      timeTotal: $("timeTotal"),
+      timePercent: $("timePercent"),
+      timeBar: $("timeBar"),
+      timeBadge: $("timeBadge"),
+      weekTimeTotal: $("weekTimeTotal"),
+      allTimeTotal: $("allTimeTotal"),
+      timeRecords: $("timeRecords"),
+      weeklyHistory: $("weeklyHistory"),
+      progressDisplay: $("progressDisplay"),
+      progressInput: $("progressInput"),
+      saveProgress: $("saveProgress"),
+      noteForm: $("noteForm"),
+      noteType: $("noteType"),
+      noteText: $("noteText"),
+      noteList: $("noteList"),
+      questionForm: $("questionForm"),
+      questionHelpText: $("questionHelpText"),
+      questionText: $("questionText"),
+      questionList: $("questionList"),
+      adminPassword: $("adminPassword"),
+      showAdminPassword: $("showAdminPassword"),
+      adminUsername: $("adminUsername"),
+      adminLoginButton: $("adminLoginButton"),
+      adminLogoutButton: $("adminLogoutButton"),
+      adminHint: $("adminHint"),
+      adminPanel: $("adminPanel"),
+      adminSortControl: $("adminSortControl"),
+      adminSortButtons: Array.from(document.querySelectorAll("[data-admin-sort]")),
+      adminSortHint: $("adminSortHint"),
+      refreshAdmin: $("refreshAdmin"),
+      exportData: $("exportData"),
+      adminUserRows: $("adminUserRows"),
+      adminExportRows: $("adminExportRows"),
+      adminDetailModal: $("adminDetailModal"),
+      closeAdminDetail: $("closeAdminDetail"),
+      adminDetailTitle: $("adminDetailTitle"),
+      adminDetailMeta: $("adminDetailMeta"),
+      adminDetailContent: $("adminDetailContent"),
+      syncStatus: $("syncStatus"),
+      toast: $("toast")
+    };
+
+    let state = loadState();
+    const savedAuthToken = localStorage.getItem(AUTH_TOKEN_KEY) || "";
+    const savedAdminToken = localStorage.getItem(ADMIN_TOKEN_KEY) || "";
+    let activeStudent = "";
+    let currentUser = "";
+    let currentUserPhone = "";
+    let authToken = "";
+    let adminToken = "";
+    let studentAuthMode = "login";
+    let sessionRestoring = Boolean((savedAuthToken || savedAdminToken) && window.location.protocol !== "file:");
+    let lastAdminExport = [];
+    let adminSort = "total";
+    let adminDetailRequestId = 0;
+    let adminDetailMutationId = 0;
+    let adminDetailPhone = "";
+    let adminDetailData = null;
+    let rosterExpanded = false;
+    let syncTimer = null;
+    let syncPending = false;
+    let sharedStateRevision = 0;
+    let timerRequestPending = false;
+    let apiOnline = window.location.protocol !== "file:" ? null : false;
+
+    const ADMIN_SORT_LABELS = {
+      total: "总学习时长",
+      week: "本周学习时长",
+      day: "本日学习时长"
+    };
+
+    function renderAdminSort() {
+      els.adminSortButtons.forEach((button) => {
+        const active = button.dataset.adminSort === adminSort;
+        button.classList.toggle("active", active);
+        button.setAttribute("aria-pressed", String(active));
+      });
+      if (els.adminSortHint) {
+        els.adminSortHint.textContent = "当前按" + ADMIN_SORT_LABELS[adminSort] + "从高到低排列";
+      }
+    }
+
+    function renderScreens() {
+      const view = adminToken ? "admin" : authToken ? "student" : "login";
+      els.loginScreen.hidden = view !== "login";
+      els.appShell.hidden = view !== "student";
+      els.adminShell.hidden = view !== "admin";
+      els.adminSection.hidden = view !== "admin";
+    }
+
+    function loadState() {
+      try {
+        const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY));
+        if (parsed && parsed.students) return parsed;
+      } catch (error) {
+        console.warn("读取本地数据失败", error);
+      }
+      return { activeStudent: "", currentUser: "", currentUserPhone: "", students: {}, users: {} };
+    }
+
+    function persistLocalState() {
+      state.activeStudent = activeStudent;
+      state.currentUser = currentUser;
+      state.currentUserPhone = currentUserPhone;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    }
+
+    function sharedApiEnabled() {
+      return window.location.protocol !== "file:";
+    }
+
+    function resetUserIdentity() {
+      currentUserPhone = "";
+      currentUser = "";
+      activeStudent = "";
+    }
+
+    function updatePasswordVisibility() {
+      const studentType = els.showStudentPasswords.checked ? "text" : "password";
+      els.passwordInput.type = studentType;
+      els.confirmPassword.type = studentType;
+      els.adminPassword.type = els.showAdminPassword.checked ? "text" : "password";
+    }
+
+    function clearAuthInputs() {
+      els.phoneInput.value = "";
+      els.passwordInput.value = "";
+      els.confirmPassword.value = "";
+      els.showStudentPasswords.checked = false;
+      els.studentName.value = "";
+      els.className.value = "";
+      els.adminUsername.value = "";
+      els.adminPassword.value = "";
+      els.showAdminPassword.checked = false;
+      updatePasswordVisibility();
+    }
+
+    function renderStudentAuthMode() {
+      const registering = studentAuthMode === "register";
+      els.studentRegisterFields.hidden = !registering;
+      els.loginButton.hidden = registering;
+      els.showRegisterButton.hidden = registering;
+      els.registerButton.hidden = !registering;
+      els.cancelRegisterButton.hidden = !registering;
+      els.passwordInput.autocomplete = registering ? "new-password" : "current-password";
+      els.confirmPassword.disabled = !registering || Boolean(authToken || sessionRestoring);
+      els.showStudentPasswords.disabled = Boolean(authToken || sessionRestoring);
+      updatePasswordVisibility();
+    }
+
+    function setStudentAuthMode(mode, focus = true) {
+      studentAuthMode = mode === "register" ? "register" : "login";
+      if (studentAuthMode === "login") {
+        els.confirmPassword.value = "";
+        els.studentName.value = "";
+        els.className.value = "";
+      }
+      renderAuth();
+      if (focus && !sessionRestoring) {
+        (studentAuthMode === "register" ? els.studentName : els.phoneInput).focus();
+      }
+    }
+
+    async function requestJson(path, options = {}) {
+      if (!sharedApiEnabled()) throw new Error("请通过 server.py 地址打开页面");
+      const headers = Object.assign({}, options.headers || {});
+      if (authToken) headers.Authorization = "Bearer " + authToken;
+      const response = await fetch(path, Object.assign({}, options, { headers }));
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        const error = new Error(data.error || "请求失败");
+        error.status = response.status;
+        throw error;
+      }
+      return data;
+    }
+
+    function applyUserPayload(payload) {
+      sessionRestoring = false;
+      studentAuthMode = "login";
+      adminToken = "";
+      localStorage.removeItem(ADMIN_TOKEN_KEY);
+      lastAdminExport = [];
+      authToken = payload.token || "";
+      localStorage.setItem(AUTH_TOKEN_KEY, authToken);
+      const user = payload.user || {};
+      currentUserPhone = user.phone || "";
+      currentUser = user.name || "";
+      activeStudent = currentUser;
+      state.students = (payload.state && payload.state.students) || state.students || {};
+      state.users = (payload.state && payload.state.users) || state.users || {};
+      ensureStudent(activeStudent);
+      persistLocalState();
+      render();
+    }
+
+    async function restoreSavedSession() {
+      if (!sharedApiEnabled()) {
+        clearUserSession();
+        return;
+      }
+      try {
+        if (savedAdminToken) {
+          const response = await fetch("/api/admin/session", {
+            cache: "no-store",
+            headers: { "Authorization": "Bearer " + savedAdminToken }
+          });
+          if (response.ok) {
+            sessionRestoring = false;
+            studentAuthMode = "login";
+            authToken = "";
+            adminToken = savedAdminToken;
+            resetUserIdentity();
+            localStorage.removeItem(AUTH_TOKEN_KEY);
+            localStorage.setItem(ADMIN_TOKEN_KEY, adminToken);
+            clearAuthInputs();
+            persistLocalState();
+            render();
+            await loadAdminData();
+            return;
+          }
+          localStorage.removeItem(ADMIN_TOKEN_KEY);
+        }
+
+        if (savedAuthToken) {
+          const response = await fetch("/api/session", {
+            cache: "no-store",
+            headers: { "Authorization": "Bearer " + savedAuthToken }
+          });
+          if (response.ok) {
+            const payload = await response.json();
+            sessionRestoring = false;
+            applyUserPayload({
+              token: savedAuthToken,
+              user: payload.user,
+              state: payload.state
+            });
+            return;
+          }
+          localStorage.removeItem(AUTH_TOKEN_KEY);
+        }
+      } catch (error) {
+        console.warn("恢复登录状态失败", error);
+      }
+      clearUserSession();
+    }
+
+    function currentUserProfile() {
+      if (!state.users) return null;
+      if (currentUserPhone && state.users[currentUserPhone]) return state.users[currentUserPhone];
+      return Object.values(state.users).find((profile) => profile && profile.name === currentUser) || null;
+    }
+
+    function clearUserSession() {
+      sessionRestoring = false;
+      studentAuthMode = "login";
+      authToken = "";
+      adminToken = "";
+      resetUserIdentity();
+      localStorage.removeItem(AUTH_TOKEN_KEY);
+      localStorage.removeItem(ADMIN_TOKEN_KEY);
+      lastAdminExport = [];
+      clearAuthInputs();
+      persistLocalState();
+      render();
+    }
+
+    async function loginUser() {
+      const phone = els.phoneInput.value.trim();
+      const password = els.passwordInput.value;
+      if (!/^\d{11}$/.test(phone)) {
+        showToast("请输入已注册的 11 位手机号，姓名不能用于登录。");
+        els.phoneInput.focus();
+        return;
+      }
+      if (!password) {
+        showToast("请输入登录密码。");
+        return;
+      }
+      try {
+        const payload = await requestJson("/api/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ phone, password })
+        });
+        applyUserPayload(payload);
+        showToast("登录成功，已进入你的学习主页。");
+      } catch (error) {
+        showToast(error.message);
+      }
+    }
+
+    async function registerUser() {
+      const phone = els.phoneInput.value.trim();
+      const password = els.passwordInput.value;
+      const confirmPassword = els.confirmPassword.value;
+      const name = els.studentName.value.trim();
+      const className = els.className.value.trim();
+      if (!/^\d{11}$/.test(phone)) {
+        showToast("注册需要填写 11 位手机号。");
+        els.phoneInput.focus();
+        return;
+      }
+      if (!password || !confirmPassword || !name || !className) {
+        showToast("注册需要填写两次密码、真实姓名和班级。");
+        return;
+      }
+      if (password.length < 6) {
+        showToast("密码至少需要 6 位。");
+        return;
+      }
+      if (password !== confirmPassword) {
+        showToast("两次输入的密码不一致。");
+        els.confirmPassword.focus();
+        return;
+      }
+      try {
+        const payload = await requestJson("/api/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ phone, password, confirmPassword, name, className })
+        });
+        applyUserPayload(payload);
+        showToast("注册成功，已登录。");
+      } catch (error) {
+        showToast(error.message);
+      }
+    }
+
+    function renderAuth() {
+      const user = currentUserProfile();
+      const loggedIn = Boolean(authToken);
+      const locked = loggedIn || sessionRestoring;
+      els.loginButton.disabled = locked;
+      els.showRegisterButton.disabled = locked;
+      els.registerButton.disabled = locked;
+      els.cancelRegisterButton.disabled = locked;
+      els.logoutButton.hidden = !loggedIn;
+      els.phoneInput.disabled = locked;
+      els.passwordInput.disabled = locked;
+      els.confirmPassword.disabled = locked || studentAuthMode !== "register";
+      els.showStudentPasswords.disabled = locked;
+      els.studentName.disabled = locked;
+      els.className.disabled = locked;
+      if (loggedIn) {
+        els.phoneInput.value = currentUserPhone;
+        els.studentName.value = currentUser || "";
+        els.className.value = user ? user.className || "" : "";
+        els.passwordInput.value = "";
+        els.confirmPassword.value = "";
+        els.passwordInput.placeholder = "已登录";
+        els.authHint.textContent = "已登录：" + currentUser + " · " + (user ? user.className : "") + "。可以编辑自己的记录。";
+        els.authHint.className = "notice sync-status online";
+      } else if (sessionRestoring) {
+        els.authHint.textContent = "正在验证上次登录，请稍候……";
+        els.authHint.className = "notice";
+      } else {
+        els.passwordInput.placeholder = "密码（至少6位）";
+        els.authHint.textContent = studentAuthMode === "register"
+          ? "创建新账号需要填写手机号、两次一致的密码、真实姓名和班级。"
+          : "登录只使用已注册手机号和密码；姓名不能用于登录。";
+        els.authHint.className = "notice";
+      }
+      renderStudentAuthMode();
+    }
+
+    async function adminRequest(path, options = {}) {
+      if (!sharedApiEnabled()) throw new Error("请通过 server.py 地址打开页面");
+      const headers = Object.assign({}, options.headers || {}, {
+        "Authorization": "Bearer " + adminToken
+      });
+      const response = await fetch(path, Object.assign({}, options, { headers }));
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        const error = new Error(data.error || "后台请求失败");
+        error.status = response.status;
+        throw error;
+      }
+      return data;
+    }
+
+    async function loginAdmin() {
+      const username = els.adminUsername.value.trim();
+      const password = els.adminPassword.value;
+      if (!username || !password) {
+        showToast("请输入管理员账号和密码。");
+        return;
+      }
+      try {
+        const payload = await requestJson("/api/admin/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username, password })
+        });
+        sessionRestoring = false;
+        studentAuthMode = "login";
+        authToken = "";
+        resetUserIdentity();
+        localStorage.removeItem(AUTH_TOKEN_KEY);
+        persistLocalState();
+        adminToken = payload.token || "";
+        localStorage.setItem(ADMIN_TOKEN_KEY, adminToken);
+        els.adminPassword.value = "";
+        els.showAdminPassword.checked = false;
+        updatePasswordVisibility();
+        render();
+        await loadAdminData();
+        showToast("后台登录成功。");
+      } catch (error) {
+        showToast(error.message);
+      }
+    }
+
+    function logoutAdmin() {
+      closeAdminDetail();
+      sessionRestoring = false;
+      studentAuthMode = "login";
+      adminToken = "";
+      authToken = "";
+      resetUserIdentity();
+      localStorage.removeItem(ADMIN_TOKEN_KEY);
+      localStorage.removeItem(AUTH_TOKEN_KEY);
+      lastAdminExport = [];
+      clearAuthInputs();
+      persistLocalState();
+      render();
+      if (!els.loginScreen.hidden) els.phoneInput.focus();
+    }
+
+    function renderAdmin() {
+      const loggedIn = Boolean(adminToken);
+      const locked = loggedIn || sessionRestoring;
+      els.adminPanel.hidden = !loggedIn;
+      els.adminLoginButton.disabled = locked;
+      els.adminLogoutButton.hidden = !loggedIn;
+      els.adminUsername.disabled = locked;
+      els.adminPassword.disabled = locked;
+      els.showAdminPassword.disabled = locked;
+      if (loggedIn) {
+        els.adminHint.textContent = "后台已登录。密码只能重置为123456，不能查看原密码。";
+        els.adminHint.className = "notice sync-status online";
+      } else {
+        els.adminHint.textContent = "管理员账号和密码由服务器环境变量 ADMIN_USERNAME、ADMIN_PASSWORD 配置。";
+        els.adminHint.className = "notice";
+      }
+      renderAdminSort();
+      renderScreens();
+    }
+
+    function renderAdminUsers(rows) {
+      if (!rows.length) {
+        els.adminUserRows.innerHTML = '<tr><td colspan="5"><div class="empty">暂无注册账号。</div></td></tr>';
+        return;
+      }
+      els.adminUserRows.innerHTML = "";
+      rows.forEach((user) => {
+        const row = document.createElement("tr");
+        row.innerHTML = '<td>' + escapeHtml(user.phone) + '</td>' +
+          '<td>' + escapeHtml(user.name) + '</td>' +
+          '<td>' + escapeHtml(user.className) + '</td>' +
+          '<td>' + escapeHtml(user.password) + '</td>';
+        const cell = document.createElement("td");
+        const reset = document.createElement("button");
+        reset.className = "mini-btn danger";
+        reset.type = "button";
+        reset.textContent = "重置为123456";
+        reset.addEventListener("click", async () => {
+          if (!window.confirm("确定将 " + user.phone + " 的密码重置为123456吗？")) return;
+          try {
+            await adminRequest("/api/admin/reset-password", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ phone: user.phone })
+            });
+            showToast("密码已重置为123456。");
+          } catch (error) {
+            showToast(error.message);
+          }
+        });
+        cell.appendChild(reset);
+        const remove = document.createElement("button");
+        remove.className = "mini-btn danger";
+        remove.type = "button";
+        remove.textContent = "注销账号";
+        remove.addEventListener("click", async () => {
+          if (!window.confirm(
+            "确定注销 " + user.name + "（" + user.phone + "）吗？\n\n" +
+            "该账号的学习记录和交流内容会一并删除，且无法恢复。"
+          )) return;
+          remove.disabled = true;
+          remove.textContent = "正在注销……";
+          try {
+            const payload = await adminRequest("/api/admin/delete-user", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ phone: user.phone })
+            });
+            if (!payload.ok || payload.phone !== user.phone) {
+              throw new Error("服务器未确认账号已注销，请重试。");
+            }
+            if (payload.state) {
+              state.students = payload.state.students || {};
+              state.users = payload.state.users || {};
+              if (activeStudent && !state.students[activeStudent]) {
+                activeStudent = currentUser && state.students[currentUser] ? currentUser : "";
+              }
+              persistLocalState();
+              render();
+            }
+            closeAdminDetail();
+            await loadAdminData();
+            showToast("账号已注销：" + user.name);
+          } catch (error) {
+            remove.disabled = false;
+            remove.textContent = "注销账号";
+            if (error.status === 401) {
+              logoutAdmin();
+              showToast("后台登录已失效，请重新登录。" );
+              return;
+            }
+            showToast(error.message);
+          }
+        });
+        cell.appendChild(remove);
+        row.appendChild(cell);
+        els.adminUserRows.appendChild(row);
+      });
+    }
+
+    function renderAdminExport(rows) {
+      if (!rows.length) {
+        els.adminExportRows.innerHTML = '<tr><td colspan="7"><div class="empty">暂无可导出的学习数据。</div></td></tr>';
+        return;
+      }
+      els.adminExportRows.innerHTML = "";
+      rows.forEach((rowData) => {
+        const row = document.createElement("tr");
+        row.innerHTML = '<td>' + escapeHtml(rowData.name) + '</td>' +
+          '<td>' + escapeHtml(rowData.className) + '</td>' +
+          '<td>' + escapeHtml(formatHours(rowData.totalMs)) + '</td>' +
+          '<td>' + escapeHtml(formatHours(rowData.weekMs)) + '</td>' +
+          '<td>' + escapeHtml(formatHours(rowData.dayMs)) + '</td>';
+        const statusCell = document.createElement("td");
+        const status = document.createElement("span");
+        status.className = "admin-study-status" + (rowData.isStudying ? " active" : "");
+        status.textContent = rowData.isStudying ? "正在打卡" : "未在打卡";
+        statusCell.appendChild(status);
+        row.appendChild(statusCell);
+        const detailCell = document.createElement("td");
+        const detailButton = document.createElement("button");
+        detailButton.className = "mini-btn";
+        detailButton.type = "button";
+        detailButton.textContent = "详情";
+        detailButton.addEventListener("click", () => openAdminDetail(rowData.phone, rowData.name));
+        detailCell.appendChild(detailButton);
+        row.appendChild(detailCell);
+        els.adminExportRows.appendChild(row);
+      });
+    }
+
+    function detailText(value, fallback = "未记录") {
+      const text = String(value == null ? "" : value).trim();
+      return text || fallback;
+    }
+
+    function detailDate(value, withTime = true) {
+      return formatDate(value, withTime);
+    }
+
+    function detailItem(title, body, meta = "") {
+      return '<div class="admin-detail-item"><strong>' + escapeHtml(title) + '</strong>' +
+        '<div>' + escapeHtml(body) + '</div>' +
+        (meta ? '<div class="meta">' + escapeHtml(meta) + '</div>' : '') + '</div>';
+    }
+
+    function detailThreadBody(question) {
+      const replies = Array.isArray(question.replies) ? question.replies : [];
+      if (!replies.length) return detailText(question.text);
+      return detailText(question.text) + "\n\n回复：\n" + replies.map((reply) =>
+        detailText(reply.author, "回复者") + " · " + detailDate(reply.createdAt) + "\n" + detailText(reply.text)
+      ).join("\n\n");
+    }
+
+    function renderAdminTimeRows(weekKey, records) {
+      if (!records.length) return '<div class="meta">暂无已结束的打卡记录</div>';
+      return '<div class="admin-time-records">' + [...records]
+        .sort((a, b) => Number(b.start || 0) - Number(a.start || 0))
+        .map((record) => {
+          const duration = Math.max(0, Number(record.end || 0) - Number(record.start || 0));
+          const recordId = typeof record.id === "string" ? record.id.trim() : "";
+          return '<div class="admin-time-record-row"><div><strong>' +
+            escapeHtml(record.manual ? "管理员补录" : "正常计时") + '</strong><div class="meta">' +
+            escapeHtml(detailDate(record.start) + " - " + detailDate(record.end) + "（" + formatDuration(duration) + "）") +
+            '</div></div>' + (recordId
+              ? '<button class="mini-btn danger" type="button" data-admin-delete-time="true" data-week-key="' +
+                escapeHtml(weekKey) + '" data-record-id="' + escapeHtml(recordId) + '">删除记录</button>'
+              : '<span class="meta">旧记录缺少 ID，无法直接删除</span>') + '</div>';
+        }).join("") + '</div>';
+    }
+
+    function bindAdminDetailActions() {
+      const form = document.getElementById("adminTimeForm");
+      const startInput = document.getElementById("adminTimeStart");
+      const endInput = document.getElementById("adminTimeEnd");
+      if (form && startInput && endInput) {
+        const now = Date.now();
+        startInput.max = toDatetimeLocalValue(now);
+        endInput.max = toDatetimeLocalValue(now);
+        startInput.value = toDatetimeLocalValue(now - 60 * 60 * 1000);
+        endInput.value = toDatetimeLocalValue(now);
+        form.addEventListener("submit", submitAdminTimeRecord);
+      }
+      els.adminDetailContent.querySelectorAll("[data-admin-delete-time]").forEach((button) => {
+        button.addEventListener("click", () => deleteAdminTimeRecord(button));
+      });
+    }
+
+    async function submitAdminTimeRecord(event) {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const submit = form.querySelector('button[type="submit"]');
+      const targetPhone = adminDetailPhone;
+      const start = new Date(document.getElementById("adminTimeStart").value).getTime();
+      const end = new Date(document.getElementById("adminTimeEnd").value).getTime();
+      if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) {
+        showToast("请填写有效的开始和结束时间。");
+        return;
+      }
+      if (end > Date.now()) {
+        showToast("补录结束时间不能晚于当前时间。");
+        return;
+      }
+      if (weekKey(new Date(start)) !== weekKey(new Date(end))) {
+        showToast("开始和结束时间必须在同一周内。");
+        return;
+      }
+      const targetRequestId = adminDetailRequestId;
+      const mutationId = ++adminDetailMutationId;
+      const targetName = els.adminDetailTitle.textContent;
+      submit.disabled = true;
+      try {
+        const payload = await adminRequest("/api/admin/add-time-record", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ phone: targetPhone, start, end })
+        });
+        if (
+          adminDetailPhone === targetPhone &&
+          adminDetailRequestId === targetRequestId &&
+          adminDetailMutationId === mutationId &&
+          !els.adminDetailModal.hidden
+        ) {
+          renderAdminDetail(payload.detail || {});
+        }
+        await loadAdminExport(adminSort);
+        showToast("学习时间已补录。");
+      } catch (error) {
+        if (error.status === 401) {
+          logoutAdmin();
+          showToast("后台登录已失效，请重新登录。");
+          return;
+        }
+        showToast(error.message);
+        if (
+          adminDetailPhone === targetPhone &&
+          adminDetailRequestId === targetRequestId &&
+          adminDetailMutationId === mutationId &&
+          !els.adminDetailModal.hidden
+        ) {
+          await openAdminDetail(targetPhone, targetName);
+        } else if (submit.isConnected) {
+          submit.disabled = false;
+        }
+      }
+    }
+
+    async function deleteAdminTimeRecord(button) {
+      const targetPhone = adminDetailPhone;
+      const weekKeyValue = button.dataset.weekKey || "";
+      const recordId = button.dataset.recordId || "";
+      if (!window.confirm("确定删除这条学习时间记录吗？删除后无法恢复。")) return;
+      const targetRequestId = adminDetailRequestId;
+      const mutationId = ++adminDetailMutationId;
+      const targetName = els.adminDetailTitle.textContent;
+      button.disabled = true;
+      try {
+        const payload = await adminRequest("/api/admin/delete-time-record", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ phone: targetPhone, weekKey: weekKeyValue, recordId })
+        });
+        if (
+          adminDetailPhone === targetPhone &&
+          adminDetailRequestId === targetRequestId &&
+          adminDetailMutationId === mutationId &&
+          !els.adminDetailModal.hidden
+        ) {
+          renderAdminDetail(payload.detail || {});
+        }
+        await loadAdminExport(adminSort);
+        showToast("学习时间记录已删除。");
+      } catch (error) {
+        if (error.status === 401) {
+          logoutAdmin();
+          showToast("后台登录已失效，请重新登录。");
+          return;
+        }
+        showToast(error.message);
+        if (
+          adminDetailPhone === targetPhone &&
+          adminDetailRequestId === targetRequestId &&
+          adminDetailMutationId === mutationId &&
+          !els.adminDetailModal.hidden
+        ) {
+          await openAdminDetail(targetPhone, targetName);
+        } else if (button.isConnected) {
+          button.disabled = false;
+        }
+      }
+    }
+
+    function renderAdminDetail(detail) {
+      const profile = detail.profile || {};
+      const summary = detail.summary || {};
+      const status = detail.status || {};
+      const communications = detail.communications || {};
+      const weeks = detail.weeks || {};
+      const statusText = status.isStudying
+        ? "正在学习 / 正在打卡（已持续 " + formatDuration(status.runningDurationMs || 0) + "）"
+        : "当前未在学习打卡";
+      adminDetailData = detail;
+      adminDetailPhone = String(profile.phone || adminDetailPhone || "");
+      els.adminDetailTitle.textContent = detailText(profile.name, "学生详情");
+      els.adminDetailMeta.textContent = detailText(profile.phone) + " · " + detailText(profile.className);
+
+      const sections = [];
+      sections.push('<section class="admin-detail-section admin-detail-account"><h3>账号与主页信息</h3><div class="admin-detail-list">' +
+        detailItem("注册时间", detailDate(profile.createdAt)) +
+        detailItem("学习主页创建时间", detailDate((detail.student || {}).createdAt)) +
+        '</div></section>');
+      sections.push('<div class="admin-detail-grid">' +
+        '<div class="admin-detail-stat"><span>当前状态</span><strong>' + escapeHtml(statusText) + '</strong></div>' +
+        '<div class="admin-detail-stat"><span>总学习时长</span><strong>' + escapeHtml(formatHours(summary.totalMs || 0)) + '</strong></div>' +
+        '<div class="admin-detail-stat"><span>本周学习时长</span><strong>' + escapeHtml(formatHours(summary.weekMs || 0)) + '</strong></div>' +
+        '<div class="admin-detail-stat"><span>本日学习时长</span><strong>' + escapeHtml(formatHours(summary.dayMs || 0)) + '</strong></div>' +
+        '</div>');
+      sections.push('<section class="admin-detail-section"><h3>学习时间补录</h3>' +
+        '<form id="adminTimeForm" class="admin-time-form">' +
+        '<label>开始时间<input id="adminTimeStart" class="field" type="datetime-local" required /></label>' +
+        '<label>结束时间<input id="adminTimeEnd" class="field" type="datetime-local" required /></label>' +
+        '<button class="btn" type="submit">补录时间</button>' +
+        '<p class="notice">可补录任意历史时间；开始与结束必须在同一周，且不能晚于当前时间。</p>' +
+        '</form></section>');
+
+      const weekKeys = Object.keys(weeks).sort().reverse();
+      sections.push('<section class="admin-detail-section"><h3>所有周学习记录</h3><div class="admin-detail-list">' +
+        (weekKeys.length ? weekKeys.map((weekKeyValue) => {
+          const week = weeks[weekKeyValue] || {};
+          const records = Array.isArray(week.timeRecords) ? week.timeRecords : [];
+          const goal = week.goal || {};
+          const runningStart = Number(week.runningStart || 0);
+          const runningMs = runningStart > 0 ? Math.max(0, Date.now() - runningStart) : 0;
+          const weekMs = records.reduce((sum, record) => sum + Math.max(0, Number(record.end || 0) - Number(record.start || 0)), 0) + runningMs;
+          const runningText = runningStart > 0
+            ? '<div class="notice sync-status online">正在打卡：' + escapeHtml(detailDate(runningStart) + " · 已持续 " + formatDuration(runningMs)) + '</div>'
+            : "";
+          const meta = "周累计 " + formatHours(weekMs) + " · 目标：" + detailText(goal.text, "未设定") + " · " + (goal.done ? "目标已完成" : "目标未完成") +
+            " · " + (goal.locked ? "目标已锁定" : "目标未锁定") + " · 目标时间：" + goalPeriodText(goal) + " · 目标创建：" + detailDate(goal.createdAt) +
+            (goal.completedAt ? " · 目标完成：" + detailDate(goal.completedAt) : "") +
+            (goal.updatedAt ? " · 最后更新：" + detailDate(goal.updatedAt) : "");
+          return '<div class="admin-detail-item"><strong>' + escapeHtml(weekKeyValue) + '</strong>' + runningText +
+            '<div class="meta">' + escapeHtml(meta + " · 当前进度：" + detailText(week.progress, "未填写")) + '</div>' +
+            renderAdminTimeRows(weekKeyValue, records) + '</div>';
+        }).join("") : '<div class="empty">暂无周学习记录。</div>') + '</div></section>');
+
+      const allNotes = [];
+      weekKeys.forEach((weekKeyValue) => {
+        const week = weeks[weekKeyValue] || {};
+        const notes = Array.isArray(week.notes) ? week.notes : [];
+        notes.forEach((note) => allNotes.push({ weekKey: weekKeyValue, note }));
+      });
+      allNotes.sort((a, b) => String((b.note || {}).createdAt || "").localeCompare(String((a.note || {}).createdAt || "")));
+      sections.push('<section class="admin-detail-section"><h3>所有随记</h3><div class="admin-detail-list">' +
+        (allNotes.length ? allNotes.map(({ weekKey: noteWeekKey, note }) => detailItem(
+          detailText(note.type, "随记") + " · " + noteWeekKey,
+          detailText(note.text),
+          detailDate(note.createdAt)
+        )).join("") : '<div class="empty">暂无随记。</div>') + '</div></section>');
+
+      const ownThreads = Array.isArray(communications.ownThreads) ? communications.ownThreads : [];
+      const asAsker = Array.isArray(communications.asAsker) ? communications.asAsker : [];
+      const asAuthor = Array.isArray(communications.asAuthor) ? communications.asAuthor : [];
+      sections.push('<section class="admin-detail-section"><h3>本人主页上的提问与交流</h3><div class="admin-detail-list">' +
+        (ownThreads.length ? ownThreads.map((item) => {
+          const question = item.question || {};
+          return detailItem(detailText(question.asker, "匿名同学") + " · " + item.weekKey, detailThreadBody(question), "提问时间：" + detailDate(question.createdAt));
+        }).join("") : '<div class="empty">暂无本人主页提问或回复。</div>') + '</div></section>');
+      sections.push('<section class="admin-detail-section"><h3>他在别人主页中的提问</h3><div class="admin-detail-list">' +
+        (asAsker.length ? asAsker.map((item) => {
+          const question = item.question || {};
+          return detailItem("在 " + detailText(item.profileName) + " 的主页提问 · " + item.weekKey, detailThreadBody(question), "提问时间：" + detailDate(question.createdAt));
+        }).join("") : '<div class="empty">暂无在别人主页提出的问题。</div>') + '</div></section>');
+      sections.push('<section class="admin-detail-section"><h3>他在别人主页中的回复</h3><div class="admin-detail-list">' +
+        (asAuthor.length ? asAuthor.map((item) => {
+          const reply = item.reply || {};
+          return detailItem("回复 " + detailText(item.profileName) + " 的问题 · " + item.weekKey, detailText(reply.text), detailDate(reply.createdAt) + " · 原问题：" + detailText(item.questionText));
+        }).join("") : '<div class="empty">暂无在别人主页的回复。</div>') + '</div></section>');
+
+      els.adminDetailContent.innerHTML = sections.join("");
+      bindAdminDetailActions();
+    }
+
+    async function openAdminDetail(phone, name) {
+      if (!adminToken) return;
+      const requestId = ++adminDetailRequestId;
+      adminDetailMutationId += 1;
+      adminDetailPhone = String(phone || "");
+      adminDetailData = null;
+      els.adminDetailModal.hidden = false;
+      els.adminDetailTitle.textContent = name || "学生详情";
+      els.adminDetailMeta.textContent = "正在加载完整资料……";
+      els.adminDetailContent.innerHTML = '<div class="empty">正在加载学习记录与交流内容……</div>';
+      try {
+        const detail = await adminRequest("/api/admin/student-detail?phone=" + encodeURIComponent(phone));
+        if (requestId !== adminDetailRequestId) return;
+        renderAdminDetail(detail);
+      } catch (error) {
+        if (requestId !== adminDetailRequestId) return;
+        if (error.status === 401) {
+          closeAdminDetail();
+          logoutAdmin();
+          showToast("后台登录已失效，请重新登录。");
+          return;
+        }
+        els.adminDetailContent.innerHTML = '<div class="empty">详情加载失败：' + escapeHtml(error.message) + '</div>';
+      }
+    }
+
+    function closeAdminDetail() {
+      adminDetailRequestId += 1;
+      adminDetailMutationId += 1;
+      adminDetailPhone = "";
+      adminDetailData = null;
+      els.adminDetailModal.hidden = true;
+    }
+
+    async function loadAdminData() {
+      if (!adminToken) return;
+      try {
+        const users = await adminRequest("/api/admin/users");
+        renderAdminUsers(users.users || []);
+        await loadAdminExport();
+      } catch (error) {
+        logoutAdmin();
+        showToast(error.message);
+      }
+    }
+
+    async function loadAdminExport(sort = adminSort) {
+      if (!adminToken) return;
+      adminSort = Object.prototype.hasOwnProperty.call(ADMIN_SORT_LABELS, sort) ? sort : "total";
+      renderAdminSort();
+      try {
+        const payload = await adminRequest("/api/admin/export?sort=" + encodeURIComponent(adminSort));
+        const metric = { total: "totalMs", week: "weekMs", day: "dayMs" }[adminSort];
+        lastAdminExport = (payload.rows || []).slice().sort((a, b) => {
+          const durationDelta = Number(b[metric] || 0) - Number(a[metric] || 0);
+          return durationDelta || String(a.name || "").localeCompare(String(b.name || ""), "zh-CN");
+        });
+        renderAdminExport(lastAdminExport);
+      } catch (error) {
+        if (error.status === 401) {
+          logoutAdmin();
+          showToast("后台登录已失效，请重新登录。");
+          return;
+        }
+        showToast(error.message);
+      }
+    }
+
+    function csvCell(value) {
+      return '"' + String(value == null ? "" : value).replace(/"/g, '""') + '"';
+    }
+
+    function downloadAdminCsv() {
+      if (!lastAdminExport.length) {
+        showToast("请先加载有数据的导出预览。");
+        return;
+      }
+      const lines = [
+        ["姓名", "班级", "总学习时长", "本周学习时长", "本日学习时长"],
+        ...lastAdminExport.map((rowData) => [
+          rowData.name,
+          rowData.className,
+          formatHours(rowData.totalMs),
+          formatHours(rowData.weekMs),
+          formatHours(rowData.dayMs)
+        ])
+      ];
+      const csv = "\ufeff" + lines.map((line) => line.map(csvCell).join(",")).join("\r\n");
+      const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "ysyx-study-export-" + getCurrentWeek() + ".csv";
+      link.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function saveState() {
+      sharedStateRevision += 1;
+      persistLocalState();
+      queueSharedSync();
+    }
+
+    function queueSharedSync() {
+      if (!sharedApiEnabled() || !authToken) return;
+      syncPending = true;
+      window.clearTimeout(syncTimer);
+      syncTimer = window.setTimeout(() => {
+        syncSharedState();
+      }, 450);
+      renderSyncStatus();
+    }
+
+    async function flushSharedSync() {
+      if (!syncPending) return true;
+      window.clearTimeout(syncTimer);
+      syncTimer = null;
+      return syncSharedState();
+    }
+
+    async function syncSharedState() {
+      if (!sharedApiEnabled() || !authToken) return false;
+      try {
+        const response = await fetch("/api/state", {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + authToken
+          },
+          body: JSON.stringify({ students: state.students })
+        });
+        if (response.status === 401) {
+          clearUserSession();
+          throw new Error("login required");
+        }
+        if (!response.ok) throw new Error("shared state save failed");
+        apiOnline = true;
+        return true;
+      } catch (error) {
+        apiOnline = false;
+        console.warn("共享数据保存失败", error);
+        return false;
+      } finally {
+        syncPending = false;
+        renderSyncStatus();
+      }
+    }
+
+    async function refreshSharedState() {
+      // The shared state contains private progress and notes. Only an active
+      // student session may request it; the admin page has its own endpoints.
+      if (!sharedApiEnabled() || !authToken || adminToken || syncPending) return;
+      const requestRevision = sharedStateRevision;
+      try {
+        const response = await fetch("/api/state", {
+          cache: "no-store",
+          headers: authToken ? { "Authorization": "Bearer " + authToken } : {}
+        });
+        if (response.status === 401) {
+          clearUserSession();
+          throw new Error("登录已失效，请重新登录。");
+        }
+        if (!response.ok) throw new Error("shared state load failed");
+        const remote = await response.json();
+        if (requestRevision !== sharedStateRevision) return;
+        const remoteStudents = remote.students || {};
+        state.users = remote.users || state.users || {};
+        // 在线共享状态以服务器为准，避免已注销账号被浏览器旧缓存继续显示。
+        state.students = remoteStudents;
+        persistLocalState();
+        apiOnline = true;
+        render();
+      } catch (error) {
+        apiOnline = false;
+        renderSyncStatus();
+        console.warn("共享数据读取失败", error);
+      }
+    }
+
+    function renderSyncStatus() {
+      if (!els.syncStatus) return;
+      if (!sharedApiEnabled()) {
+        els.syncStatus.textContent = "单机模式：数据只保存在当前浏览器";
+        els.syncStatus.className = "notice sync-status offline";
+      } else if (!authToken) {
+        els.syncStatus.textContent = "请先登录：登录后才会同步个人打卡";
+        els.syncStatus.className = "notice sync-status offline";
+      } else if (syncPending || apiOnline === null) {
+        els.syncStatus.textContent = "多人同步：正在连接共享服务……";
+        els.syncStatus.className = "notice sync-status";
+      } else if (apiOnline) {
+        els.syncStatus.textContent = "多人同步已开启：提问、回复和打卡会共享";
+        els.syncStatus.className = "notice sync-status online";
+      } else {
+        els.syncStatus.textContent = "共享服务暂不可用：当前变更会先保存在本机";
+        els.syncStatus.className = "notice sync-status offline";
+      }
+    }
+
+    function pad(value) {
+      return String(value).padStart(2, "0");
+    }
+
+    function startOfWeek(date = new Date()) {
+      const d = new Date(date);
+      const day = d.getDay() || 7;
+      d.setHours(0, 0, 0, 0);
+      d.setDate(d.getDate() - day + 1);
+      return d;
+    }
+
+    function endOfWeek(date = new Date()) {
+      const d = startOfWeek(date);
+      d.setDate(d.getDate() + 6);
+      d.setHours(23, 59, 59, 999);
+      return d;
+    }
+
+    function weekKey(date = new Date()) {
+      const start = startOfWeek(date);
+      return [start.getFullYear(), pad(start.getMonth() + 1), pad(start.getDate())].join("-");
+    }
+
+    function formatDate(dateLike, withTime = false) {
+      if (!dateLike) return "未记录";
+      const d = new Date(dateLike);
+      if (Number.isNaN(d.getTime())) return "未记录";
+      const base = [d.getFullYear(), pad(d.getMonth() + 1), pad(d.getDate())].join("/");
+      return withTime ? base + " " + pad(d.getHours()) + ":" + pad(d.getMinutes()) : base;
+    }
+
+    function toDatetimeLocalValue(value) {
+      if (!value) return "";
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return "";
+      return date.getFullYear() + "-" + pad(date.getMonth() + 1) + "-" + pad(date.getDate()) +
+        "T" + pad(date.getHours()) + ":" + pad(date.getMinutes());
+    }
+
+    function goalPeriodText(goal) {
+      const start = goal && goal.startAt ? formatDate(goal.startAt, true) : "";
+      const end = goal && goal.endAt ? formatDate(goal.endAt, true) : "";
+      if (start && end) return start + " 至 " + end;
+      if (start) return start + " 起";
+      if (end) return "截至 " + end;
+      return "未设置时间范围";
+    }
+
+    function formatDuration(ms) {
+      const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+      const h = Math.floor(totalSeconds / 3600);
+      const m = Math.floor((totalSeconds % 3600) / 60);
+      const s = totalSeconds % 60;
+      return pad(h) + ":" + pad(m) + ":" + pad(s);
+    }
+
+    function formatHours(ms) {
+      if (ms <= 0) return "0h";
+      return (ms / 3600000).toFixed(ms >= 3600000 ? 1 : 2).replace(/\.0$/, "") + "h";
+    }
+
+    function makeId() {
+      if (window.crypto && typeof window.crypto.randomUUID === "function") {
+        return window.crypto.randomUUID();
+      }
+      return "id-" + Date.now() + "-" + Math.random().toString(16).slice(2);
+    }
+
+    function getCurrentWeek() {
+      return weekKey();
+    }
+
+    function newWeekData() {
+      return {
+        mode: "time",
+        runningStart: null,
+        timeRecords: [],
+        goal: { text: "", startAt: "", endAt: "", createdAt: "", done: false, completedAt: "", locked: false, updatedAt: "" },
+        progress: "",
+        notes: [],
+        questions: []
+      };
+    }
+
+    function normalizeWeekData(week) {
+      const defaults = newWeekData();
+      const normalized = Object.assign(defaults, week || {});
+      normalized.timeRecords = Array.isArray(normalized.timeRecords) ? normalized.timeRecords : [];
+      normalized.notes = Array.isArray(normalized.notes) ? normalized.notes : [];
+      normalized.questions = Array.isArray(normalized.questions) ? normalized.questions : [];
+      normalized.goal = Object.assign(defaults.goal, normalized.goal || {});
+      normalized.goal.startAt = normalized.goal.startAt || "";
+      normalized.goal.endAt = normalized.goal.endAt || "";
+      normalized.mode = "time";
+      return normalized;
+    }
+
+    function ensureStudent(name) {
+      const cleanName = (name || "").trim();
+      if (!cleanName) return null;
+      if (!state.students[cleanName]) {
+        state.students[cleanName] = {
+          createdAt: new Date().toISOString(),
+          weeks: {}
+        };
+      }
+      const key = getCurrentWeek();
+      if (!state.students[cleanName].weeks[key]) {
+        state.students[cleanName].weeks[key] = newWeekData();
+      }
+      Object.keys(state.students[cleanName].weeks).forEach((key) => {
+        state.students[cleanName].weeks[key] = normalizeWeekData(state.students[cleanName].weeks[key]);
+      });
+      return state.students[cleanName];
+    }
+
+    function currentWeekData() {
+      if (!activeStudent) return newWeekData();
+      const student = ensureStudent(activeStudent);
+      const key = getCurrentWeek();
+      student.weeks[key] = normalizeWeekData(student.weeks[key]);
+      return student.weeks[key];
+    }
+
+    function isOwnProfile() {
+      return Boolean(authToken && activeStudent && currentUser && activeStudent === currentUser);
+    }
+
+    function hasTimeRecords(week) {
+      return week.runningStart || week.timeRecords.length > 0;
+    }
+
+    function totalTime(week) {
+      return week.timeRecords.reduce((sum, item) => sum + Math.max(0, item.end - item.start), 0);
+    }
+
+    function weekTotalTime(week, includeRunning = false) {
+      const running = includeRunning && week.runningStart ? Date.now() - week.runningStart : 0;
+      return totalTime(week) + Math.max(0, running);
+    }
+
+    function studentTotalTime(student) {
+      if (!student || !student.weeks) return 0;
+      return Object.entries(student.weeks).reduce((sum, [key, week]) => {
+        return sum + weekTotalTime(normalizeWeekData(week), key === getCurrentWeek());
+      }, 0);
+    }
+
+    function formatWeekLabel(key) {
+      const start = new Date(key + "T00:00:00");
+      if (Number.isNaN(start.getTime())) return key;
+      const end = new Date(start);
+      end.setDate(end.getDate() + 6);
+      return formatDate(start) + " - " + formatDate(end);
+    }
+
+    function showToast(message) {
+      els.toast.textContent = message;
+      els.toast.classList.add("show");
+      window.clearTimeout(showToast.timer);
+      showToast.timer = window.setTimeout(() => els.toast.classList.remove("show"), 2600);
+    }
+
+    function renderProfiles() {
+      const names = Object.keys(state.students).sort((a, b) => a.localeCompare(b, "zh-CN"));
+      if (!activeStudent && currentUser) activeStudent = currentUser;
+      if (!activeStudent) {
+        els.profileContext.textContent = currentUser ? "当前用户：" + currentUser + " · 尚未选择查看对象" : "当前查看：未选择学习者";
+      } else if (isOwnProfile()) {
+        els.profileContext.textContent = "当前用户：" + currentUser + " · 正在编辑自己的主页";
+      } else {
+        els.profileContext.textContent = "当前用户：" + (currentUser || "未设置") + " · 正在查看：" + activeStudent;
+      }
+      els.returnMyProfile.hidden = !currentUser || !activeStudent || isOwnProfile();
+      els.studentRosterPanel.hidden = !rosterExpanded;
+      els.rosterToggle.setAttribute("aria-expanded", String(rosterExpanded));
+      els.rosterToggle.textContent = rosterExpanded ? "收回列表" : "展开列表";
+      renderRoster(names);
+    }
+
+    function currentWeekForStudent(student) {
+      if (!student || !student.weeks) return newWeekData();
+      const key = getCurrentWeek();
+      student.weeks[key] = normalizeWeekData(student.weeks[key] || newWeekData());
+      return student.weeks[key];
+    }
+
+    function compactText(value, fallback = "未填写") {
+      const text = String(value || "").trim().replace(/\s+/g, " ");
+      return text ? (text.length > 42 ? text.slice(0, 42) + "…" : text) : fallback;
+    }
+
+    function renderRoster(names) {
+      if (!els.studentRoster) return;
+      if (!names.length) {
+        els.studentRoster.innerHTML = '<tr><td colspan="5"><div class="empty">暂无已注册学习者。</div></td></tr>';
+        return;
+      }
+
+      els.studentRoster.innerHTML = "";
+      names.forEach((name) => {
+        const student = ensureStudent(name);
+        const week = currentWeekForStudent(student);
+        const weekMs = weekTotalTime(week, true);
+        const allMs = studentTotalTime(student);
+        const row = document.createElement("tr");
+        row.className = name === activeStudent ? "selected" : "";
+        row.innerHTML = '<td><strong>' + escapeHtml(name) + '</strong>' +
+          (name === currentUser ? '<div class="meta">当前用户</div>' : '') + '</td>' +
+          '<td class="progress-cell">' + escapeHtml(compactText(week.progress)) + '</td>' +
+          '<td>' + escapeHtml(formatHours(weekMs)) + '</td>' +
+          '<td>' + escapeHtml(formatHours(allMs)) + '</td>';
+        const actionCell = document.createElement("td");
+        const action = document.createElement("button");
+        action.className = "mini-btn";
+        action.type = "button";
+        action.textContent = name === activeStudent ? "正在查看" : "进入/提问";
+        action.addEventListener("click", () => {
+          activeStudent = name;
+          persistLocalState();
+          render();
+          document.getElementById("notesTitle").scrollIntoView({ behavior: "smooth", block: "start" });
+        });
+        actionCell.appendChild(action);
+        row.appendChild(actionCell);
+        row.addEventListener("dblclick", () => action.click());
+        els.studentRoster.appendChild(row);
+      });
+    }
+
+    function renderTime(week) {
+      const now = Date.now();
+      const runningMs = week.runningStart ? now - week.runningStart : 0;
+      const totalMs = weekTotalTime(week, true);
+      const allMs = activeStudent ? studentTotalTime(ensureStudent(activeStudent)) : totalMs;
+      const percent = Math.min(100, Math.round((totalMs / WEEKLY_TARGET_MS) * 100));
+      const enabled = isOwnProfile();
+
+      els.timerDisplay.textContent = week.runningStart ? formatDuration(runningMs) : "00:00:00";
+      els.timerLabel.textContent = week.runningStart
+        ? "本次开始于 " + formatDate(week.runningStart, true)
+        : enabled ? "当前未开始" : activeStudent ? "查看模式：仅可阅读" : "请先进入自己的主页";
+      els.timerButton.textContent = week.runningStart ? "结束打卡" : "开始打卡";
+      els.timerButton.disabled = !enabled || timerRequestPending;
+      els.timeTotal.textContent = "已累计 " + formatHours(totalMs);
+      els.timePercent.textContent = percent + "%";
+      els.timeBar.style.width = percent + "%";
+      els.timeBadge.textContent = totalMs >= WEEKLY_TARGET_MS ? "本周已达标" : "本周目标 15h";
+      els.timeBadge.className = "pill" + (totalMs >= WEEKLY_TARGET_MS ? "" : " amber");
+      els.weekTimeTotal.textContent = formatHours(totalMs);
+      els.allTimeTotal.textContent = formatHours(allMs);
+      renderWeeklyHistory(activeStudent ? ensureStudent(activeStudent) : null);
+
+      if (!week.timeRecords.length) {
+        els.timeRecords.innerHTML = '<div class="empty">暂无时间打卡记录。</div>';
+        return;
+      }
+
+      els.timeRecords.innerHTML = "";
+      [...week.timeRecords].sort((a, b) => b.start - a.start).forEach((item) => {
+        const row = document.createElement("div");
+        row.className = "record";
+        const duration = item.end - item.start;
+        row.innerHTML = '<div><strong>' + formatHours(duration) + '</strong><div class="meta">' +
+          formatDate(item.start, true) + ' 至 ' + formatDate(item.end, true) +
+          (item.manual ? ' · 管理员补录' : '') + '</div></div>';
+        els.timeRecords.appendChild(row);
+      });
+    }
+
+    function renderWeeklyHistory(student) {
+      if (!student || !student.weeks || !Object.keys(student.weeks).length) {
+        els.weeklyHistory.innerHTML = '<div class="empty">完成一次时间打卡后，这里会保留每周总学习时间。</div>';
+        return;
+      }
+
+      const currentKey = getCurrentWeek();
+      els.weeklyHistory.innerHTML = "";
+      Object.keys(student.weeks).sort((a, b) => b.localeCompare(a)).forEach((key) => {
+        const week = normalizeWeekData(student.weeks[key]);
+        const isCurrentWeek = key === currentKey;
+        const total = weekTotalTime(week, isCurrentWeek);
+        const complete = total >= WEEKLY_TARGET_MS;
+        const row = document.createElement("div");
+        row.className = "record";
+        row.innerHTML = '<div><strong>' + escapeHtml(formatWeekLabel(key)) + '</strong>' +
+          '<div class="meta">时间打卡总和：' + escapeHtml(formatHours(total)) +
+          (isCurrentWeek ? " · 本周" : " · 已结束") + '</div></div>';
+        const badge = document.createElement("span");
+        badge.className = complete ? "pill" : "pill amber";
+        badge.textContent = complete ? "已达 15h" : (isCurrentWeek ? "进行中" : "未达标");
+        row.appendChild(badge);
+        els.weeklyHistory.appendChild(row);
+      });
+    }
+
+    async function deleteOwnNote(weekKey, noteId) {
+      if (!isOwnProfile()) return;
+      if (!sharedApiEnabled() || !authToken) {
+        const week = currentWeekData();
+        week.notes = week.notes.filter((item) => item.id !== noteId);
+        persistLocalState();
+        render();
+        return;
+      }
+      try {
+        if (!await flushSharedSync()) {
+          showToast("本地变更尚未同步，请连接服务器后重试删除。");
+          return;
+        }
+        sharedStateRevision += 1;
+        const payload = await requestJson("/api/student/delete-note", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ weekKey, noteId })
+        });
+        state.students = (payload.state && payload.state.students) || state.students;
+        state.users = (payload.state && payload.state.users) || state.users;
+        persistLocalState();
+        render();
+        showToast("随记已删除。");
+      } catch (error) {
+        if (error.status === 401) {
+          clearUserSession();
+          showToast("登录已失效，请重新登录。");
+          return;
+        }
+        showToast(error.message || "随记删除失败，请稍后重试。");
+      }
+    }
+
+    function renderNotes(week) {
+      const progressText = week.progress.trim() || "还没有填写进度。";
+      els.progressDisplay.textContent = progressText;
+      els.progressInput.value = week.progress;
+      const ownEnabled = isOwnProfile();
+      els.progressInput.disabled = !ownEnabled;
+      els.saveProgress.disabled = !ownEnabled;
+      els.noteForm.querySelectorAll("select, textarea, button").forEach((el) => {
+        el.disabled = !ownEnabled;
+      });
+
+      if (!week.notes.length) {
+        els.noteList.innerHTML = '<div class="empty">还没有随记。完成必做题或修复 bug 后，可以在这里补上复盘。</div>';
+      } else {
+        els.noteList.innerHTML = "";
+        [...week.notes].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).forEach((note) => {
+          const card = document.createElement("div");
+          card.className = "note";
+          card.innerHTML = '<strong>' + escapeHtml(note.type) + '</strong><div class="note-body">' +
+            escapeHtml(note.text) + '</div><div class="meta">' + formatDate(note.createdAt, true) + '</div>';
+          if (ownEnabled) {
+            const actions = document.createElement("div");
+            actions.className = "note-actions";
+            const remove = document.createElement("button");
+            remove.className = "mini-btn danger";
+            remove.type = "button";
+            remove.textContent = "删除";
+            remove.addEventListener("click", async () => {
+              remove.disabled = true;
+              await deleteOwnNote(getCurrentWeek(), note.id);
+              if (remove.isConnected) remove.disabled = false;
+            });
+            actions.appendChild(remove);
+            card.appendChild(actions);
+          }
+          els.noteList.appendChild(card);
+        });
+      }
+    }
+
+    function renderQuestions(week) {
+      els.questionHelpText.textContent = isOwnProfile()
+        ? "你可以收到来自其他同学的提问。"
+        : "你可以在此处提问。";
+      if (!week.questions.length) {
+        els.questionList.innerHTML = '<div class="empty">暂无提问。同学可以在这里留下问题，方便你集中回复。</div>';
+        return;
+      }
+      els.questionList.innerHTML = "";
+      [...week.questions].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).forEach((question) => {
+        if (!Array.isArray(question.replies)) question.replies = [];
+        const card = document.createElement("div");
+        card.className = "question";
+        card.innerHTML = '<strong>' + escapeHtml(question.asker || "匿名同学") + ' 的问题</strong><div class="question-body">' +
+          escapeHtml(question.text) + '</div><div class="meta">' + formatDate(question.createdAt, true) + '</div>';
+
+        const replies = document.createElement("div");
+        replies.className = "reply-list";
+        if (question.replies.length) {
+          question.replies.forEach((reply) => {
+            const node = document.createElement("div");
+            node.className = "reply";
+            node.innerHTML = '<div>' + escapeHtml(reply.text) + '</div><div class="meta">' +
+              escapeHtml(reply.author || currentUser || "回复者") + ' · ' + formatDate(reply.createdAt, true) + '</div>';
+            replies.appendChild(node);
+          });
+          card.appendChild(replies);
+        }
+
+        const form = document.createElement("form");
+        form.className = "form-grid";
+        form.style.marginTop = "10px";
+        form.innerHTML = '<textarea placeholder="回复或继续交流……" aria-label="回复内容"></textarea>' +
+          '<button class="btn secondary" type="submit">回复</button>';
+        form.addEventListener("submit", (event) => {
+          event.preventDefault();
+          if (!authToken) {
+            showToast("请先登录后再回复。");
+            return;
+          }
+          const author = currentUser || "回复者";
+          const text = form.querySelector("textarea").value.trim();
+          if (!text) {
+            showToast("请先填写回复内容。");
+            return;
+          }
+          question.replies.push({
+            id: makeId(),
+            author,
+            text,
+            createdAt: new Date().toISOString()
+          });
+          saveState();
+          render();
+        });
+        card.appendChild(form);
+        els.questionList.appendChild(card);
+      });
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    function render() {
+      renderScreens();
+      const start = startOfWeek();
+      const end = endOfWeek();
+      els.weekRange.textContent = formatDate(start) + " - " + formatDate(end);
+      renderProfiles();
+      renderAuth();
+      const week = activeStudent ? currentWeekData() : newWeekData();
+      renderTime(week);
+      renderNotes(week);
+      renderQuestions(week);
+      renderSyncStatus();
+      renderAdmin();
+    }
+
+    els.loginButton.addEventListener("click", loginUser);
+    els.showStudentPasswords.addEventListener("change", updatePasswordVisibility);
+    els.showAdminPassword.addEventListener("change", updatePasswordVisibility);
+    els.confirmPassword.addEventListener("keydown", function (event) {
+      if (event.key === "Enter" && studentAuthMode === "register") registerUser();
+    });
+    els.showRegisterButton.addEventListener("click", () => setStudentAuthMode("register"));
+    els.registerButton.addEventListener("click", registerUser);
+    els.cancelRegisterButton.addEventListener("click", () => setStudentAuthMode("login"));
+    els.logoutButton.addEventListener("click", () => {
+      clearUserSession();
+      showToast("已退出登录。");
+    });
+    els.passwordInput.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        studentAuthMode === "register" ? registerUser() : loginUser();
+      }
+    });
+    els.className.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" && studentAuthMode === "register") registerUser();
+    });
+    els.adminPassword.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") loginAdmin();
+    });
+    els.adminLoginButton.addEventListener("click", loginAdmin);
+    els.adminLogoutButton.addEventListener("click", logoutAdmin);
+    els.closeAdminDetail.addEventListener("click", closeAdminDetail);
+    els.adminDetailModal.addEventListener("click", (event) => {
+      if (event.target === els.adminDetailModal) closeAdminDetail();
+    });
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && !els.adminDetailModal.hidden) closeAdminDetail();
+    });
+    els.refreshAdmin.addEventListener("click", loadAdminData);
+    els.adminSortButtons.forEach((button) => {
+      button.addEventListener("click", () => loadAdminExport(button.dataset.adminSort));
+    });
+    els.exportData.addEventListener("click", downloadAdminCsv);
+    els.rosterToggle.addEventListener("click", () => {
+      rosterExpanded = !rosterExpanded;
+      render();
+    });
+    els.returnMyProfile.addEventListener("click", () => {
+      if (!currentUser) return;
+      activeStudent = currentUser;
+      persistLocalState();
+      render();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    });
+    els.timerButton.addEventListener("click", async () => {
+      if (!isOwnProfile()) {
+        showToast("查看他人主页时不能修改对方的时间记录。");
+        return;
+      }
+      if (timerRequestPending) return;
+      if (sharedApiEnabled() && authToken) {
+        timerRequestPending = true;
+        renderTime(currentWeekData());
+        try {
+          if (!await flushSharedSync()) {
+            showToast("本地变更尚未同步，请连接服务器后再打卡。");
+            return;
+          }
+          sharedStateRevision += 1;
+          const payload = await requestJson("/api/student/toggle-timer", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: "{}"
+          });
+          state.students = (payload.state && payload.state.students) || state.students;
+          state.users = (payload.state && payload.state.users) || state.users;
+          persistLocalState();
+          if (payload.discarded) {
+            showToast("本次学习不足 1 分钟，已结束但不计入记录。");
+          }
+        } catch (error) {
+          if (error.status === 401) {
+            timerRequestPending = false;
+            clearUserSession();
+            showToast("登录已失效，请重新登录。");
+            return;
+          }
+          showToast(error.message || "打卡操作失败，请稍后重试。");
+        } finally {
+          timerRequestPending = false;
+          if (authToken) render();
+        }
+        return;
+      }
+      const week = currentWeekData();
+      if (week.runningStart) {
+        const end = Date.now();
+        if (end - week.runningStart < 60000) {
+          showToast("本次学习不足 1 分钟，已结束但不计入记录。");
+        } else {
+          week.timeRecords.push({
+            id: makeId(),
+            start: week.runningStart,
+            end,
+            manual: false
+          });
+        }
+        week.runningStart = null;
+      } else {
+        week.runningStart = Date.now();
+      }
+      saveState();
+      render();
+    });
+
+    els.saveProgress.addEventListener("click", () => {
+      if (!isOwnProfile()) {
+        showToast("查看他人主页时不能修改对方的进度。");
+        return;
+      }
+      const week = currentWeekData();
+      week.progress = els.progressInput.value.trim();
+      saveState();
+      render();
+      showToast("当前详细进度已更新。");
+    });
+
+    els.progressInput.addEventListener("input", () => {
+      if (!isOwnProfile()) return;
+      const text = els.progressInput.value;
+      els.progressDisplay.textContent = text.trim() || "还没有填写进度。";
+      const week = currentWeekData();
+      week.progress = text.trim();
+      saveState();
+    });
+
+    els.noteForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+      if (!isOwnProfile()) {
+        showToast("查看他人主页时不能修改对方的随记。");
+        return;
+      }
+      const week = currentWeekData();
+      const text = els.noteText.value.trim();
+      if (!text) {
+        showToast("请填写随记内容。");
+        return;
+      }
+      week.notes.push({
+        id: makeId(),
+        type: els.noteType.value,
+        text,
+        createdAt: new Date().toISOString()
+      });
+      els.noteText.value = "";
+      saveState();
+      render();
+    });
+
+    els.questionForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+      if (!authToken) {
+        showToast("请先登录后再提问。");
+        return;
+      }
+      if (!activeStudent) {
+        showToast("请先进入一个学习者主页，再提交提问。");
+        return;
+      }
+      const week = currentWeekData();
+      const text = els.questionText.value.trim();
+      if (!text) {
+        showToast("请填写问题内容。");
+        return;
+      }
+      week.questions.push({
+        id: makeId(),
+        asker: currentUser || "匿名同学",
+        text,
+        createdAt: new Date().toISOString(),
+        replies: []
+      });
+      els.questionText.value = "";
+      saveState();
+      render();
+      showToast("问题已提交到提问区。");
+    });
+
+    window.setInterval(() => {
+      const week = activeStudent ? currentWeekData() : newWeekData();
+      if (week.runningStart) renderTime(week);
+    }, 1000);
+
+    window.setInterval(refreshSharedState, 5000);
+    window.setInterval(() => {
+      if (adminToken) loadAdminExport(adminSort);
+    }, 15000);
+
+    window.addEventListener("beforeunload", (event) => {
+      const week = activeStudent ? currentWeekData() : null;
+      if (week && week.runningStart) {
+        event.preventDefault();
+        event.returnValue = "当前学习计时仍在进行，确定要离开吗？";
+      }
+    });
+
+    if (sessionRestoring) {
+      render();
+      restoreSavedSession();
+    } else {
+      clearUserSession();
+    }
+  </script>
+</body>
+</html>
