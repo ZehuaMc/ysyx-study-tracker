@@ -6,7 +6,7 @@ COPY assets ./assets
 
 ENV HOST=0.0.0.0
 ENV PORT=8000
-ENV YSYX_DATA_FILE=/data/ysyx_shared_state.json
+ENV YSYX_DB_FILE=/data/ysyx_state.sqlite3
 
 EXPOSE 8000
 CMD ["python", "server.py"]

@@ -1317,16 +1317,16 @@
           </div>
         </div>
         <h1 id="loginTitle"><span>华南农业大学</span><span class="mobile-title-line">一生一芯学习打卡</span></h1>
-        <p>登录后进入本周打卡、学习随记和同学交流页面。管理员使用配置的账号和密码进入独立后台。</p>
+        <p>登录后进入实名学习打卡页面，可查看学习小组成员的学习时间。管理员使用配置的账号和密码进入独立后台。</p>
       </div>
       <div class="login-grid">
         <section class="login-box" aria-labelledby="studentLoginTitle">
           <div>
             <h2 id="studentLoginTitle">学生登录</h2>
-            <p>登录只校验已注册的手机号和密码；姓名与班级仅在注册新账号时填写。</p>
+            <p>登录只校验已注册的学号和密码；姓名与班级仅在注册新账号时填写。</p>
           </div>
           <div class="auth-grid">
-            <input id="phoneInput" class="field" type="tel" inputmode="numeric" autocomplete="tel" placeholder="手机号" />
+            <input id="phoneInput" class="field" type="text" inputmode="numeric" autocomplete="username" placeholder="学号" />
             <input id="passwordInput" class="field" type="password" autocomplete="current-password" placeholder="密码（至少6位）" />
             <div id="studentRegisterFields" class="register-fields" hidden>
               <input id="confirmPassword" class="field" type="password" autocomplete="new-password" placeholder="再次输入密码" aria-label="再次输入密码" />
@@ -1344,7 +1344,7 @@
             <button id="registerButton" class="btn" type="button" hidden>创建账号并进入</button>
             <button id="cancelRegisterButton" class="btn secondary" type="button" hidden>返回登录</button>
           </div>
-          <div id="authHint" class="notice">登录后才能编辑自己的打卡，并参与共享提问。</div>
+          <div id="authHint" class="notice">登录后可编辑自己的打卡，并实名查看小组成员的学习时间。</div>
         </section>
 
         <section class="login-box" aria-labelledby="adminLoginTitle">
@@ -1363,7 +1363,7 @@
           </div>
         </section>
       </div>
-      <p class="login-footnote">账号密码仅用于本学习系统登录。学生只能修改自己的打卡、进度和随记，查看他人时可提问和回复。</p>
+      <p class="login-footnote">账号密码仅用于本学习系统登录。学生只能修改自己的打卡和进度，学号不会向其他学生公开。</p>
     </section>
   </main>
 
@@ -1432,7 +1432,7 @@
       <div class="section-title">
         <div>
           <h2 id="rosterTitle">学习者概览</h2>
-          <p>查看所有人的本周学习情况，选择一行进入对应学习界面并提出问题。</p>
+          <p>查看所有人的本周学习情况和当前学习状态。</p>
         </div>
         <div class="roster-heading-actions">
           <button id="rosterToggle" class="btn secondary" type="button" aria-expanded="false" aria-controls="studentRosterPanel">展开列表</button>
@@ -1491,7 +1491,7 @@
           <div id="weeklyHistory" class="record-list"></div>
         </section>
 
-        <section class="card feature-card" aria-labelledby="notesTitle">
+        <section class="card feature-card" aria-labelledby="notesTitle" hidden>
           <div class="section-title">
             <div>
               <h2 id="notesTitle"><span class="section-mark" aria-hidden="true">记</span>随记功能</h2>
@@ -1543,7 +1543,7 @@
       </div>
     </section>
 
-      <p class="footer">华南农业大学一生一芯学习小组×ICIL创芯实验室 · 支持时间打卡、学习随记、提问与回复</p>
+      <p class="footer">华南农业大学一生一芯学习小组×ICIL创芯实验室 · 实名学习时间打卡</p>
     </div>
   </main>
 
@@ -1568,7 +1568,7 @@
           <table class="roster-table admin-table">
             <thead>
               <tr>
-                <th>手机号</th>
+                <th>学号</th>
                 <th>姓名</th>
                 <th>班级</th>
                 <th>密码状态</th>
@@ -1706,6 +1706,7 @@
     };
 
     let state = loadState();
+    let overviewRows = null;
     const savedAuthToken = localStorage.getItem(AUTH_TOKEN_KEY) || "";
     const savedAdminToken = localStorage.getItem(ADMIN_TOKEN_KEY) || "";
     let activeStudent = "";
@@ -1841,6 +1842,7 @@
     }
 
     function applyUserPayload(payload) {
+      overviewRows = null;
       sessionRestoring = false;
       studentAuthMode = "login";
       adminToken = "";
@@ -1933,8 +1935,8 @@
     async function loginUser() {
       const phone = els.phoneInput.value.trim();
       const password = els.passwordInput.value;
-      if (!/^\d{11}$/.test(phone)) {
-        showToast("请输入已注册的 11 位手机号，姓名不能用于登录。");
+      if (!/^\d{6,20}$/.test(phone)) {
+        showToast("请输入已注册的学号，姓名不能用于登录。");
         els.phoneInput.focus();
         return;
       }
@@ -1961,8 +1963,8 @@
       const confirmPassword = els.confirmPassword.value;
       const name = els.studentName.value.trim();
       const className = els.className.value.trim();
-      if (!/^\d{11}$/.test(phone)) {
-        showToast("注册需要填写 11 位手机号。");
+      if (!/^\d{6,20}$/.test(phone)) {
+        showToast("注册需要填写 6 至 20 位数字学号。");
         els.phoneInput.focus();
         return;
       }
@@ -2022,8 +2024,8 @@
       } else {
         els.passwordInput.placeholder = "密码（至少6位）";
         els.authHint.textContent = studentAuthMode === "register"
-          ? "创建新账号需要填写手机号、两次一致的密码、真实姓名和班级。"
-          : "登录只使用已注册手机号和密码；姓名不能用于登录。";
+          ? "创建新账号需要填写学号、两次一致的密码、真实姓名和班级。"
+          : "登录只使用已注册学号和密码；姓名不能用于登录。";
         els.authHint.className = "notice";
       }
       renderStudentAuthMode();
@@ -2256,7 +2258,7 @@
           return '<div class="admin-time-record-row"><div><strong>' +
             escapeHtml(record.manual ? "管理员补录" : "正常计时") + '</strong><div class="meta">' +
             escapeHtml(detailDate(record.start) + " - " + detailDate(record.end) + "（" + formatDuration(duration) + "）") +
-            '</div></div>' + (recordId
+            '</div>' + (record.summary ? '<div class="meta">' + escapeHtml(record.summary) + '</div>' : '') + '</div>' + (recordId
               ? '<button class="mini-btn danger" type="button" data-admin-delete-time="true" data-week-key="' +
                 escapeHtml(weekKey) + '" data-record-id="' + escapeHtml(recordId) + '">删除记录</button>'
               : '<span class="meta">旧记录缺少 ID，无法直接删除</span>') + '</div>';
@@ -2438,39 +2440,6 @@
             renderAdminTimeRows(weekKeyValue, records) + '</div>';
         }).join("") : '<div class="empty">暂无周学习记录。</div>') + '</div></section>');
 
-      const allNotes = [];
-      weekKeys.forEach((weekKeyValue) => {
-        const week = weeks[weekKeyValue] || {};
-        const notes = Array.isArray(week.notes) ? week.notes : [];
-        notes.forEach((note) => allNotes.push({ weekKey: weekKeyValue, note }));
-      });
-      allNotes.sort((a, b) => String((b.note || {}).createdAt || "").localeCompare(String((a.note || {}).createdAt || "")));
-      sections.push('<section class="admin-detail-section"><h3>所有随记</h3><div class="admin-detail-list">' +
-        (allNotes.length ? allNotes.map(({ weekKey: noteWeekKey, note }) => detailItem(
-          detailText(note.type, "随记") + " · " + noteWeekKey,
-          detailText(note.text),
-          detailDate(note.createdAt)
-        )).join("") : '<div class="empty">暂无随记。</div>') + '</div></section>');
-
-      const ownThreads = Array.isArray(communications.ownThreads) ? communications.ownThreads : [];
-      const asAsker = Array.isArray(communications.asAsker) ? communications.asAsker : [];
-      const asAuthor = Array.isArray(communications.asAuthor) ? communications.asAuthor : [];
-      sections.push('<section class="admin-detail-section"><h3>本人主页上的提问与交流</h3><div class="admin-detail-list">' +
-        (ownThreads.length ? ownThreads.map((item) => {
-          const question = item.question || {};
-          return detailItem(detailText(question.asker, "匿名同学") + " · " + item.weekKey, detailThreadBody(question), "提问时间：" + detailDate(question.createdAt));
-        }).join("") : '<div class="empty">暂无本人主页提问或回复。</div>') + '</div></section>');
-      sections.push('<section class="admin-detail-section"><h3>他在别人主页中的提问</h3><div class="admin-detail-list">' +
-        (asAsker.length ? asAsker.map((item) => {
-          const question = item.question || {};
-          return detailItem("在 " + detailText(item.profileName) + " 的主页提问 · " + item.weekKey, detailThreadBody(question), "提问时间：" + detailDate(question.createdAt));
-        }).join("") : '<div class="empty">暂无在别人主页提出的问题。</div>') + '</div></section>');
-      sections.push('<section class="admin-detail-section"><h3>他在别人主页中的回复</h3><div class="admin-detail-list">' +
-        (asAuthor.length ? asAuthor.map((item) => {
-          const reply = item.reply || {};
-          return detailItem("回复 " + detailText(item.profileName) + " 的问题 · " + item.weekKey, detailText(reply.text), detailDate(reply.createdAt) + " · 原问题：" + detailText(item.questionText));
-        }).join("") : '<div class="empty">暂无在别人主页的回复。</div>') + '</div></section>');
-
       els.adminDetailContent.innerHTML = sections.join("");
       bindAdminDetailActions();
     }
@@ -2628,7 +2597,7 @@
       if (!sharedApiEnabled() || !authToken || adminToken || syncPending) return;
       const requestRevision = sharedStateRevision;
       try {
-        const response = await fetch("/api/state", {
+        const response = await fetch("/api/overview", {
           cache: "no-store",
           headers: authToken ? { "Authorization": "Bearer " + authToken } : {}
         });
@@ -2639,11 +2608,7 @@
         if (!response.ok) throw new Error("shared state load failed");
         const remote = await response.json();
         if (requestRevision !== sharedStateRevision) return;
-        const remoteStudents = remote.students || {};
-        state.users = remote.users || state.users || {};
-        // 在线共享状态以服务器为准，避免已注销账号被浏览器旧缓存继续显示。
-        state.students = remoteStudents;
-        persistLocalState();
+        overviewRows = Array.isArray(remote.rows) ? remote.rows : [];
         apiOnline = true;
         render();
       } catch (error) {
@@ -2665,7 +2630,7 @@
         els.syncStatus.textContent = "多人同步：正在连接共享服务……";
         els.syncStatus.className = "notice sync-status";
       } else if (apiOnline) {
-        els.syncStatus.textContent = "多人同步已开启：提问、回复和打卡会共享";
+        els.syncStatus.textContent = "多人同步已开启：实名学习时间会在组内共享";
         els.syncStatus.className = "notice sync-status online";
       } else {
         els.syncStatus.textContent = "共享服务暂不可用：当前变更会先保存在本机";
@@ -2868,6 +2833,9 @@
 
     function renderRoster(names) {
       if (!els.studentRoster) return;
+      if (overviewRows) {
+        names = overviewRows.map((row) => row.name);
+      }
       if (!names.length) {
         els.studentRoster.innerHTML = '<tr><td colspan="5"><div class="empty">暂无已注册学习者。</div></td></tr>';
         return;
@@ -2877,8 +2845,9 @@
       names.forEach((name) => {
         const student = ensureStudent(name);
         const week = currentWeekForStudent(student);
-        const weekMs = weekTotalTime(week, true);
-        const allMs = studentTotalTime(student);
+        const summary = overviewRows && overviewRows.find((item) => item.name === name);
+        const weekMs = summary ? summary.weekMs : weekTotalTime(week, true);
+        const allMs = summary ? summary.totalMs : studentTotalTime(student);
         const row = document.createElement("tr");
         row.className = name === activeStudent ? "selected" : "";
         row.innerHTML = '<td><strong>' + escapeHtml(name) + '</strong>' +
@@ -2890,16 +2859,12 @@
         const action = document.createElement("button");
         action.className = "mini-btn";
         action.type = "button";
-        action.textContent = name === activeStudent ? "正在查看" : "进入/提问";
-        action.addEventListener("click", () => {
-          activeStudent = name;
-          persistLocalState();
-          render();
-          document.getElementById("notesTitle").scrollIntoView({ behavior: "smooth", block: "start" });
-        });
+        const studying = summary ? summary.isStudying : Boolean(week.runningStart);
+        action.textContent = studying ? "正在学习" : "未在学习";
+        action.classList.toggle("active", studying);
+        action.disabled = true;
         actionCell.appendChild(action);
         row.appendChild(actionCell);
-        row.addEventListener("dblclick", () => action.click());
         els.studentRoster.appendChild(row);
       });
     }
@@ -2939,7 +2904,8 @@
         const duration = item.end - item.start;
         row.innerHTML = '<div><strong>' + formatHours(duration) + '</strong><div class="meta">' +
           formatDate(item.start, true) + ' 至 ' + formatDate(item.end, true) +
-          (item.manual ? ' · 管理员补录' : '') + '</div></div>';
+          (item.manual ? ' · 管理员补录' : '') + '</div>' +
+          (item.summary ? '<div class="meta">' + escapeHtml(item.summary) + '</div>' : '') + '</div>';
         els.timeRecords.appendChild(row);
       });
     }
@@ -3184,6 +3150,16 @@
         return;
       }
       if (timerRequestPending) return;
+      const stoppingTimer = Boolean(currentWeekData().runningStart);
+      let sessionSummary = "";
+      if (stoppingTimer) {
+        while (!sessionSummary) {
+          const answer = window.prompt("请填写本次打卡的学习内容（必填）", "");
+          if (answer === null) return;
+          sessionSummary = answer.trim().slice(0, 500);
+          if (!sessionSummary) showToast("请填写本次打卡的学习内容。");
+        }
+      }
       if (sharedApiEnabled() && authToken) {
         timerRequestPending = true;
         renderTime(currentWeekData());
@@ -3196,10 +3172,11 @@
           const payload = await requestJson("/api/student/toggle-timer", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: "{}"
+            body: JSON.stringify({ summary: sessionSummary })
           });
           state.students = (payload.state && payload.state.students) || state.students;
           state.users = (payload.state && payload.state.users) || state.users;
+          overviewRows = null;
           persistLocalState();
           if (payload.discarded) {
             showToast("本次学习不足 1 分钟，已结束但不计入记录。");
@@ -3229,6 +3206,7 @@
             start: week.runningStart,
             end,
             manual: false
+            ,summary: sessionSummary
           });
         }
         week.runningStart = null;

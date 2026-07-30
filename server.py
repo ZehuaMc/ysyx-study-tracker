@@ -7,13 +7,13 @@ import base64
 import hashlib
 import hmac
 import json
+import sqlite3
 import math
 import mimetypes
 import os
 import secrets
 import socket
 import sys
-import tempfile
 import threading
 import time
 from copy import deepcopy
@@ -25,6 +25,7 @@ from urllib.parse import parse_qs, unquote, urlparse
 
 ROOT = Path(__file__).resolve().parent
 DATA_FILE = Path(os.environ.get("YSYX_DATA_FILE", str(ROOT / "ysyx_shared_state.json")))
+DB_FILE = Path(os.environ.get("YSYX_DB_FILE", str(ROOT / "ysyx_state.sqlite3")))
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "admin123456")
 ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME", "admin")
 RESET_PASSWORD = "123456"
@@ -42,33 +43,170 @@ def now_iso() -> str:
     return datetime.now(SHANGHAI_TZ).isoformat()
 
 
+def init_db(db: sqlite3.Connection) -> None:
+    db.execute("PRAGMA journal_mode=WAL")
+    db.executescript("""
+      CREATE TABLE IF NOT EXISTS users (phone TEXT PRIMARY KEY, name TEXT UNIQUE NOT NULL, class_name TEXT NOT NULL, password_hash TEXT NOT NULL, created_at TEXT NOT NULL);
+      CREATE TABLE IF NOT EXISTS students (name TEXT PRIMARY KEY, phone TEXT NOT NULL, class_name TEXT NOT NULL);
+      CREATE TABLE IF NOT EXISTS weeks (student_name TEXT NOT NULL, week_key TEXT NOT NULL, progress TEXT NOT NULL DEFAULT '', running_start INTEGER, PRIMARY KEY(student_name, week_key));
+      CREATE TABLE IF NOT EXISTS time_records (id TEXT PRIMARY KEY, student_name TEXT NOT NULL, week_key TEXT NOT NULL, start_ms INTEGER NOT NULL, end_ms INTEGER, manual INTEGER NOT NULL DEFAULT 0, summary TEXT NOT NULL DEFAULT '');
+      CREATE TABLE IF NOT EXISTS metadata (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+      CREATE TABLE IF NOT EXISTS sessions (token TEXT PRIMARY KEY, kind TEXT NOT NULL, subject TEXT NOT NULL, expires_at INTEGER NOT NULL);
+      CREATE INDEX IF NOT EXISTS idx_records_student ON time_records(student_name, start_ms);
+    """)
+
+
+def load_legacy_state(db: sqlite3.Connection) -> dict:
+    value = default_state()
+    row = db.execute("SELECT payload FROM app_state WHERE id=1").fetchone() if db.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='app_state'").fetchone() else None
+    if row:
+        try: value = json.loads(row[0])
+        except json.JSONDecodeError: pass
+    elif DATA_FILE.exists():
+        try: value = json.loads(DATA_FILE.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError): pass
+    return value if isinstance(value, dict) else default_state()
+
+
+def write_normalized(db: sqlite3.Connection, value: dict) -> None:
+    seen_users, seen_students, seen_weeks, seen_records = set(), set(), set(), set()
+    for phone, user in value.get("users", {}).items():
+        if isinstance(user, dict):
+            name = str(user.get("name", "")).strip() or phone
+            seen_users.add(phone)
+            db.execute("INSERT INTO users(phone,name,class_name,password_hash,created_at) VALUES(?,?,?,?,?) ON CONFLICT(phone) DO UPDATE SET name=excluded.name,class_name=excluded.class_name,password_hash=excluded.password_hash,created_at=excluded.created_at", (phone, name, str(user.get("className", "")), str(user.get("passwordHash", "")), str(user.get("createdAt", ""))))
+    for name, student in value.get("students", {}).items():
+        if not isinstance(student, dict): continue
+        seen_students.add(name)
+        db.execute("INSERT INTO students VALUES(?,?,?) ON CONFLICT(name) DO UPDATE SET phone=excluded.phone,class_name=excluded.class_name", (name, str(student.get("phone", "")), str(student.get("className", ""))))
+        for week_key, week in (student.get("weeks", {}) or {}).items():
+            if not isinstance(week, dict): continue
+            seen_weeks.add((name, week_key))
+            db.execute("INSERT INTO weeks VALUES(?,?,?,?) ON CONFLICT(student_name,week_key) DO UPDATE SET progress=excluded.progress,running_start=excluded.running_start", (name, week_key, str(week.get("progress", "")), week.get("runningStart")))
+            for record in week.get("timeRecords", []) or []:
+                if isinstance(record, dict):
+                    rid = str(record.get("id", secrets.token_urlsafe(12))); seen_records.add(rid)
+                    db.execute("INSERT INTO time_records VALUES(?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET student_name=excluded.student_name,week_key=excluded.week_key,start_ms=excluded.start_ms,end_ms=excluded.end_ms,manual=excluded.manual,summary=excluded.summary", (rid, name, week_key, int(record.get("start", 0)), record.get("end"), int(bool(record.get("manual"))), str(record.get("summary", ""))))
+    if seen_users: db.execute("DELETE FROM users WHERE phone NOT IN (%s)" % ",".join("?" * len(seen_users)), tuple(seen_users))
+    else: db.execute("DELETE FROM users")
+    if seen_students: db.execute("DELETE FROM students WHERE name NOT IN (%s)" % ",".join("?" * len(seen_students)), tuple(seen_students))
+    else: db.execute("DELETE FROM students")
+    if seen_weeks: db.execute("DELETE FROM weeks WHERE (student_name,week_key) NOT IN (%s)" % ",".join(["(?,?)"] * len(seen_weeks)), tuple(x for pair in seen_weeks for x in pair))
+    else: db.execute("DELETE FROM weeks")
+    if seen_records: db.execute("DELETE FROM time_records WHERE id NOT IN (%s)" % ",".join("?" * len(seen_records)), tuple(seen_records))
+    else: db.execute("DELETE FROM time_records")
+
+
 def read_state() -> dict:
-    if not DATA_FILE.exists():
-        return default_state()
-    try:
-        with DATA_FILE.open("r", encoding="utf-8") as handle:
-            value = json.load(handle)
-        if isinstance(value, dict):
-            value.setdefault("students", {})
-            value.setdefault("users", {})
-            if isinstance(value.get("students"), dict) and isinstance(value.get("users"), dict):
-                return value
-    except (OSError, json.JSONDecodeError):
-        pass
-    return default_state()
+    DB_FILE.parent.mkdir(parents=True, exist_ok=True)
+    with sqlite3.connect(DB_FILE) as db:
+        init_db(db)
+        migrated = db.execute("SELECT value FROM metadata WHERE key='normalized_migration'").fetchone()
+        if not migrated:
+            write_normalized(db, load_legacy_state(db))
+            db.execute("INSERT OR REPLACE INTO metadata VALUES('normalized_migration','1')")
+        db.execute("DROP TABLE IF EXISTS app_state")
+        db.commit()
+        value = default_state()
+        for phone, name, cls, pwd, created in db.execute("SELECT phone,name,class_name,password_hash,created_at FROM users"):
+            value["users"][phone] = {"phone": phone, "name": name, "className": cls, "passwordHash": pwd, "createdAt": created}
+        for name, phone, cls in db.execute("SELECT name,phone,class_name FROM students"):
+            value["students"][name] = {"phone": phone, "className": cls, "weeks": {}}
+        for name, week_key, progress, running in db.execute("SELECT student_name,week_key,progress,running_start FROM weeks"):
+            value["students"].setdefault(name, {"weeks": {}})["weeks"][week_key] = {"progress": progress, "runningStart": running, "timeRecords": []}
+        for rid, name, week_key, start, end, manual, summary in db.execute("SELECT id,student_name,week_key,start_ms,end_ms,manual,summary FROM time_records"):
+            value["students"].setdefault(name, {"weeks": {}})["weeks"].setdefault(week_key, {"timeRecords": []}).setdefault("timeRecords", []).append({"id": rid, "start": start, "end": end, "manual": bool(manual), "summary": summary})
+        return value
 
 
 def write_state(value: dict) -> None:
-    DATA_FILE.parent.mkdir(parents=True, exist_ok=True)
-    fd, temp_name = tempfile.mkstemp(prefix=".ysyx-state-", suffix=".tmp", dir=DATA_FILE.parent)
-    try:
-        with os.fdopen(fd, "w", encoding="utf-8") as handle:
-            json.dump(value, handle, ensure_ascii=False, indent=2)
-            handle.write("\n")
-        os.replace(temp_name, DATA_FILE)
-    finally:
-        if os.path.exists(temp_name):
-            os.unlink(temp_name)
+    DB_FILE.parent.mkdir(parents=True, exist_ok=True)
+    with sqlite3.connect(DB_FILE) as db:
+        init_db(db)
+        write_normalized(db, value)
+        db.commit()
+
+
+def read_overview() -> list[dict]:
+    """Read only roster aggregates; historical records stay in SQLite."""
+    week_key = current_week_key()
+    now_ms = int(time.time() * 1000)
+    with sqlite3.connect(DB_FILE) as db:
+        init_db(db)
+        rows = []
+        for name, cls in db.execute("SELECT name,class_name FROM students ORDER BY name"):
+            total = db.execute("SELECT COALESCE(SUM(end_ms-start_ms),0) FROM time_records WHERE student_name=? AND end_ms IS NOT NULL", (name,)).fetchone()[0]
+            week = db.execute("SELECT COALESCE(SUM(end_ms-start_ms),0) FROM time_records WHERE student_name=? AND week_key=? AND end_ms IS NOT NULL", (name, week_key)).fetchone()[0]
+            running = db.execute("SELECT running_start FROM weeks WHERE student_name=? AND week_key=?", (name, week_key)).fetchone()
+            running_start = running[0] if running and running[0] else None
+            running_ms = max(0, now_ms - running_start) if running_start else 0
+            rows.append({"name": name, "className": cls, "totalMs": total + running_ms, "weekMs": week + running_ms, "dayMs": 0, "isStudying": bool(running_start), "runningStart": running_start, "runningDurationMs": running_ms})
+        return rows
+
+
+def read_user_and_student(phone: str) -> tuple[dict, dict] | None:
+    """Load one account and its records without materializing the whole database."""
+    with sqlite3.connect(DB_FILE) as db:
+        init_db(db)
+        row = db.execute("SELECT name,class_name,password_hash,created_at FROM users WHERE phone=?", (phone,)).fetchone()
+        if not row: return None
+        name, cls, password_hash, created_at = row
+        user = {"phone": phone, "name": name, "className": cls, "passwordHash": password_hash, "createdAt": created_at}
+        student = {"phone": phone, "className": cls, "weeks": {}}
+        for week_key, progress, running in db.execute("SELECT week_key,progress,running_start FROM weeks WHERE student_name=?", (name,)):
+            student["weeks"][week_key] = {"progress": progress, "runningStart": running, "timeRecords": []}
+        for rid, week_key, start, end, manual, summary in db.execute("SELECT id,week_key,start_ms,end_ms,manual,summary FROM time_records WHERE student_name=? ORDER BY start_ms", (name,)):
+            week = student["weeks"].setdefault(week_key, {"progress": "", "runningStart": None, "timeRecords": []})
+            week["timeRecords"].append({"id": rid, "start": start, "end": end, "manual": bool(manual), "summary": summary})
+        return user, student
+
+
+def scoped_state(phone: str) -> dict:
+    loaded = read_user_and_student(phone)
+    if not loaded: return default_state()
+    user, student = loaded
+    name = user["name"]
+    return {"users": {name: public_user(phone, user, include_phone=False)}, "students": {name: without_password_hash(student)}}
+
+
+def save_progress(phone: str, progress: str) -> None:
+    loaded = read_user_and_student(phone)
+    if not loaded: return
+    name = loaded[0]["name"]
+    with sqlite3.connect(DB_FILE) as db:
+        init_db(db)
+        db.execute("INSERT INTO weeks(student_name,week_key,progress,running_start) VALUES(?,?,?,NULL) ON CONFLICT(student_name,week_key) DO UPDATE SET progress=excluded.progress", (name, current_week_key(), progress[:2000]))
+        db.commit()
+
+
+def toggle_timer(phone: str, summary: str) -> dict:
+    loaded = read_user_and_student(phone)
+    if not loaded: raise LookupError("student unauthorized")
+    name = loaded[0]["name"]
+    now_ms = int(time.time() * 1000)
+    with sqlite3.connect(DB_FILE) as db:
+        init_db(db)
+        db.execute("BEGIN IMMEDIATE")
+        active = db.execute("SELECT week_key,running_start FROM weeks WHERE student_name=? AND running_start IS NOT NULL ORDER BY running_start DESC LIMIT 1", (name,)).fetchone()
+        if not active:
+            db.execute("INSERT INTO weeks(student_name,week_key,progress,running_start) VALUES(?,?,?,?) ON CONFLICT(student_name,week_key) DO UPDATE SET running_start=excluded.running_start", (name, current_week_key(), "", now_ms))
+            db.commit(); return {"action": "started", "discarded": False, "records": []}
+        if not summary: raise ValueError("结束打卡前请填写本次学习内容")
+        start_ms = int(active[1]); db.execute("UPDATE weeks SET running_start=NULL WHERE student_name=?", (name,))
+        records = []
+        if now_ms - start_ms >= 60_000:
+            cursor = start_ms
+            while cursor < now_ms:
+                moment = datetime.fromtimestamp(cursor / 1000, SHANGHAI_TZ)
+                key = current_week_key(moment)
+                monday = moment.replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=moment.weekday())
+                end = min(now_ms, int((monday + timedelta(days=7)).timestamp() * 1000))
+                rid = "record-" + secrets.token_urlsafe(16)
+                db.execute("INSERT OR IGNORE INTO weeks(student_name,week_key,progress,running_start) VALUES(?,?,?,NULL)", (name, key, ""))
+                db.execute("INSERT INTO time_records VALUES(?,?,?,?,?,?,?)", (rid, name, key, cursor, end, 0, summary[:500]))
+                records.append({"id": rid, "start": cursor, "end": end, "manual": False, "summary": summary[:500]}); cursor = end
+        db.commit()
+        return {"action": "stopped", "discarded": now_ms - start_ms < 60_000, "records": records}
 
 
 def b64(value: bytes) -> str:
@@ -123,6 +261,11 @@ def public_state(state: dict) -> dict:
         if isinstance(student, dict):
             safe_student = deepcopy(student)
             safe_student.pop("phone", None)
+            for week in safe_student.get("weeks", {}).values():
+                if isinstance(week, dict):
+                    week.pop("notes", None)
+                    week.pop("questions", None)
+                    week.pop("deletedNoteIds", None)
             students[name] = safe_student
     return {
         "students": students,
@@ -175,13 +318,9 @@ def merge_student(existing: dict, incoming: dict, actor_name: str = "") -> dict:
             merged_week["deletedNoteIds"] = []
         merged_week["timeRecords"] = deepcopy(existing_time_records)
         merged_week["runningStart"] = existing_running_start
-        merged_week["notes"] = merge_notes(
-            existing_week.get("notes"), incoming_week.get("notes"), deleted_note_ids
-        )
-        incoming_questions = incoming_week.get("questions")
-        merged_week["questions"] = merge_question_threads(
-            existing_week.get("questions"), incoming_questions, actor_name
-        )
+        merged_week.pop("notes", None)
+        merged_week.pop("questions", None)
+        merged_week.pop("deletedNoteIds", None)
         existing_goal = existing_week.get("goal", {})
         incoming_goal = incoming_week.get("goal", {})
         existing_goal = existing_goal if isinstance(existing_goal, dict) else {}
@@ -355,11 +494,27 @@ def auth_header(headers) -> str:
 
 
 def user_from_token(token: str) -> str | None:
-    return USER_SESSIONS.get(token)
+    if not token: return None
+    with sqlite3.connect(DB_FILE) as db:
+        init_db(db)
+        row = db.execute("SELECT subject FROM sessions WHERE token=? AND kind='student' AND expires_at>?", (token, int(time.time()))).fetchone()
+        return row[0] if row else None
 
 
 def is_admin_token(token: str) -> bool:
-    return token in ADMIN_SESSIONS
+    if not token: return False
+    with sqlite3.connect(DB_FILE) as db:
+        init_db(db)
+        return bool(db.execute("SELECT 1 FROM sessions WHERE token=? AND kind='admin' AND expires_at>?", (token, int(time.time()))).fetchone())
+
+
+def save_session(token: str, kind: str, subject: str) -> None:
+    with sqlite3.connect(DB_FILE) as db:
+        init_db(db)
+        now = int(time.time())
+        db.execute("DELETE FROM sessions WHERE expires_at<=?", (now,))
+        db.execute("INSERT OR REPLACE INTO sessions VALUES(?,?,?,?)", (token, kind, subject, now + 30 * 86400))
+        db.commit()
 
 
 def parse_json_body(handler: SimpleHTTPRequestHandler) -> dict:
@@ -555,7 +710,7 @@ def active_student_timer(student: dict, now_ms: int) -> tuple[str, int] | None:
 
 
 def append_timed_session(
-    state: dict, phone: str, user: dict, start_ms: int, end_ms: int
+    state: dict, phone: str, user: dict, start_ms: int, end_ms: int, summary: str = ""
 ) -> list[dict]:
     """Append a completed timer, splitting it at Shanghai week boundaries."""
     records = []
@@ -575,6 +730,7 @@ def append_timed_session(
             "start": cursor,
             "end": segment_end,
             "manual": False,
+            "summary": summary,
         }
         week["timeRecords"].append(record)
         records.append(record)
@@ -868,19 +1024,13 @@ class CheckinHandler(SimpleHTTPRequestHandler):
             return
         if parsed.path == "/api/session":
             token = auth_header(self.headers)
-            with DATA_LOCK:
-                state = read_state()
-                identity = authenticated_student(state, token)
-                if not identity:
-                    self.send_json({"error": "请重新登录"}, 401)
-                    return
-                phone, _, user = identity
-                create_student_if_missing(state, phone, user)
-                write_state(state)
-                payload = {
-                    "user": public_user(phone, user),
-                    "state": public_state(state),
-                }
+            phone = user_from_token(token)
+            loaded = read_user_and_student(phone) if phone else None
+            if not loaded:
+                self.send_json({"error": "请重新登录"}, 401)
+                return
+            user, _ = loaded
+            payload = {"user": public_user(phone, user), "state": scoped_state(phone)}
             self.send_json(payload)
             return
         if parsed.path == "/api/admin/session":
@@ -890,16 +1040,19 @@ class CheckinHandler(SimpleHTTPRequestHandler):
             return
         if parsed.path == "/api/state":
             token = auth_header(self.headers)
+            phone = user_from_token(token)
+            if not phone:
+                self.send_json({"error": "请重新登录"}, 401)
+                return
+            self.send_json(scoped_state(phone))
+            return
+        if parsed.path == "/api/overview":
+            token = auth_header(self.headers)
             if not token or not user_from_token(token):
                 self.send_json({"error": "请重新登录"}, 401)
                 return
-            with DATA_LOCK:
-                state = read_state()
-                if not authenticated_student(state, token):
-                    self.send_json({"error": "student unauthorized"}, 401)
-                    return
-                value = public_state(state)
-            self.send_json(value)
+            rows = read_overview()
+            self.send_json({"rows": rows})
             return
         if parsed.path == "/api/admin/users":
             if not self.require_admin():
@@ -929,8 +1082,8 @@ class CheckinHandler(SimpleHTTPRequestHandler):
             if not self.require_admin():
                 return
             phone = clean_phone(parse_qs(parsed.query).get("phone", [""])[0])
-            if len(phone) != 11:
-                self.send_json({"error": "phone must be an 11-digit number"}, 400)
+            if not (6 <= len(phone) <= 20):
+                self.send_json({"error": "student id must be 6-20 digits"}, 400)
                 return
             with DATA_LOCK:
                 detail = admin_student_detail(read_state(), phone)
@@ -958,57 +1111,38 @@ class CheckinHandler(SimpleHTTPRequestHandler):
             confirm_password = str(payload.get("confirmPassword", ""))
             name = str(payload.get("name", "")).strip()
             class_name = str(payload.get("className", "")).strip()
-            if len(phone) != 11 or len(password) < 6 or not confirm_password or not name or not class_name:
-                self.send_json({"error": "手机号、两次密码、姓名和班级不能为空，密码至少6位"}, 400)
+            if not (6 <= len(phone) <= 20) or len(password) < 6 or not confirm_password or not name or not class_name:
+                self.send_json({"error": "学号、两次密码、姓名和班级不能为空，密码至少6位"}, 400)
                 return
             if password != confirm_password:
                 self.send_json({"error": "两次输入的密码不一致"}, 400)
                 return
-            with DATA_LOCK:
-                state = read_state()
-                users = state.setdefault("users", {})
-                if phone in users:
-                    self.send_json({"error": "该手机号已经注册"}, 409)
-                    return
-                if any(
-                    isinstance(existing, dict) and str(existing.get("name", "")).strip() == name
-                    for existing in users.values()
-                ):
-                    self.send_json({"error": "该姓名已经注册，请使用不同姓名"}, 409)
-                    return
-                user = {
-                    "phone": phone,
-                    "name": name,
-                    "className": class_name,
-                    "passwordHash": hash_password(password),
-                    "createdAt": now_iso(),
-                }
-                users[phone] = user
-                create_student_if_missing(state, phone, user)
-                write_state(state)
+            user = {"phone": phone, "name": name, "className": class_name, "passwordHash": hash_password(password), "createdAt": now_iso()}
+            try:
+                with sqlite3.connect(DB_FILE) as db:
+                    init_db(db)
+                    db.execute("INSERT INTO users VALUES(?,?,?,?,?)", (phone, name, class_name, user["passwordHash"], user["createdAt"]))
+                    db.execute("INSERT INTO students VALUES(?,?,?)", (name, phone, class_name)); db.commit()
+            except sqlite3.IntegrityError:
+                self.send_json({"error": "该学号或姓名已经注册"}, 409); return
             token = secrets.token_urlsafe(32)
-            USER_SESSIONS[token] = phone
-            self.send_json({"token": token, "user": public_user(phone, user), "state": public_state(state)})
+            save_session(token, "student", phone)
+            self.send_json({"token": token, "user": public_user(phone, user), "state": scoped_state(phone)})
             return
 
         if parsed.path == "/api/login":
             phone = clean_phone(payload.get("phone"))
             password = str(payload.get("password", ""))
             supplied_name = str(payload.get("name", "")).strip()
-            with DATA_LOCK:
-                state = read_state()
-                user = state.get("users", {}).get(phone)
-                if not isinstance(user, dict) or not verify_password(password, user.get("passwordHash", "")):
-                    self.send_json({"error": "手机号或密码错误"}, 401)
-                    return
-                if supplied_name and supplied_name != str(user.get("name", "")).strip():
-                    self.send_json({"error": "姓名与手机号不匹配"}, 401)
-                    return
-                create_student_if_missing(state, phone, user)
-                write_state(state)
+            loaded = read_user_and_student(phone)
+            user = loaded[0] if loaded else None
+            if not user or not verify_password(password, user.get("passwordHash", "")):
+                self.send_json({"error": "学号或密码错误"}, 401); return
+            if supplied_name and supplied_name != user["name"]:
+                self.send_json({"error": "姓名与学号不匹配"}, 401); return
             token = secrets.token_urlsafe(32)
-            USER_SESSIONS[token] = phone
-            self.send_json({"token": token, "user": public_user(phone, user), "state": public_state(state)})
+            save_session(token, "student", phone)
+            self.send_json({"token": token, "user": public_user(phone, user), "state": scoped_state(phone)})
             return
 
         if parsed.path == "/api/student/delete-note":
@@ -1066,52 +1200,18 @@ class CheckinHandler(SimpleHTTPRequestHandler):
 
         if parsed.path == "/api/student/toggle-timer":
             token = auth_header(self.headers)
-            if not user_from_token(token):
+            phone = user_from_token(token)
+            if not phone:
                 self.send_json({"error": "student unauthorized"}, 401)
                 return
-            with DATA_LOCK:
-                current = read_state()
-                identity = authenticated_student(current, token)
-                if not identity:
-                    self.send_json({"error": "student unauthorized"}, 401)
-                    return
-                phone, owner_name, user = identity
-                candidate = deepcopy(current)
-                create_student_if_missing(candidate, phone, user)
-                student = candidate["students"][owner_name]
-                now_ms = int(time.time() * 1000)
-                active_timer = active_student_timer(student, now_ms)
-                weeks = student.get("weeks", {})
-                if isinstance(weeks, dict):
-                    for week in weeks.values():
-                        if isinstance(week, dict):
-                            week["runningStart"] = None
-
-                records = []
-                discarded = False
-                if active_timer:
-                    _, running_start = active_timer
-                    if now_ms - running_start < 60_000:
-                        discarded = True
-                    else:
-                        records = append_timed_session(
-                            candidate, phone, user, running_start, now_ms
-                        )
-                    action = "stopped"
-                else:
-                    week = ensure_student_week(
-                        candidate, phone, user, current_week_key()
-                    )
-                    week["runningStart"] = now_ms
-                    action = "started"
-                write_state(candidate)
-                response_state = public_state(candidate)
+            try:
+                result = toggle_timer(phone, str(payload.get("summary", "")).strip())
+            except ValueError as error:
+                self.send_json({"error": str(error)}, 400); return
             self.send_json({
                 "ok": True,
-                "action": action,
-                "discarded": discarded,
-                "records": records,
-                "state": response_state,
+                **result,
+                "state": scoped_state(phone),
             })
             return
 
@@ -1126,7 +1226,7 @@ class CheckinHandler(SimpleHTTPRequestHandler):
                 self.send_json({"error": "管理员密码错误"}, 401)
                 return
             token = secrets.token_urlsafe(32)
-            ADMIN_SESSIONS.add(token)
+            save_session(token, "admin", username)
             self.send_json({"token": token})
             return
 
@@ -1152,7 +1252,7 @@ class CheckinHandler(SimpleHTTPRequestHandler):
             phone = clean_phone(payload.get("phone"))
             start_ms = finite_epoch_ms(payload.get("start"))
             end_ms = finite_epoch_ms(payload.get("end"))
-            if len(phone) != 11 or start_ms is None or end_ms is None:
+            if not (6 <= len(phone) <= 20) or start_ms is None or end_ms is None:
                 self.send_json({"error": "phone, start and end are invalid"}, 400)
                 return
             now_ms = int(time.time() * 1000)
@@ -1199,7 +1299,7 @@ class CheckinHandler(SimpleHTTPRequestHandler):
             phone = clean_phone(payload.get("phone"))
             week_key = valid_week_key(payload.get("weekKey"))
             record_id = valid_item_identifier(payload.get("recordId"))
-            if len(phone) != 11 or not week_key or not record_id:
+            if not (6 <= len(phone) <= 20) or not week_key or not record_id:
                 self.send_json({"error": "phone, weekKey and recordId are required"}, 400)
                 return
             with DATA_LOCK:
@@ -1250,8 +1350,8 @@ class CheckinHandler(SimpleHTTPRequestHandler):
             if not self.require_admin():
                 return
             phone = clean_phone(payload.get("phone"))
-            if len(phone) != 11:
-                self.send_json({"error": "phone must be an 11-digit number"}, 400)
+            if not (6 <= len(phone) <= 20):
+                self.send_json({"error": "student id must be 6-20 digits"}, 400)
                 return
             with DATA_LOCK:
                 state = read_state()
@@ -1281,6 +1381,9 @@ class CheckinHandler(SimpleHTTPRequestHandler):
                 for session_token, session_phone in list(USER_SESSIONS.items()):
                     if session_phone == phone:
                         USER_SESSIONS.pop(session_token, None)
+                with sqlite3.connect(DB_FILE) as session_db:
+                    session_db.execute("DELETE FROM sessions WHERE kind='student' AND subject=?", (phone,))
+                    session_db.commit()
                 write_state(state)
                 response_state = public_state(state)
             self.send_json({
@@ -1309,30 +1412,16 @@ class CheckinHandler(SimpleHTTPRequestHandler):
         except (ValueError, TypeError, json.JSONDecodeError):
             self.send_json({"error": "invalid JSON payload"}, 400)
             return
-        with DATA_LOCK:
-            current = read_state()
-            identity = authenticated_student(current, token)
-            if not identity:
-                self.send_json({"error": "登录已失效，请重新登录"}, 401)
-                return
-            phone, owner_name, user = identity
-            current_students = current.setdefault("students", {})
-            for name, student in students.items():
-                if isinstance(name, str) and isinstance(student, dict):
-                    if name == owner_name:
-                        merged = merge_student(
-                            current_students.get(name, {}), student, owner_name
-                        )
-                        merged["phone"] = phone
-                        merged["className"] = str(user.get("className", ""))
-                        current_students[name] = merged
-                    elif name in current_students:
-                        current_students[name] = merge_questions_only(
-                            current_students[name], student, owner_name
-                        )
-            write_state(current)
-            response = public_state(current)
-        self.send_json(response)
+        phone = user_from_token(token)
+        loaded = read_user_and_student(phone) if phone else None
+        if not loaded:
+            self.send_json({"error": "登录已失效，请重新登录"}, 401)
+            return
+        owner_name = loaded[0]["name"]
+        incoming = students.get(owner_name, {})
+        week = (incoming.get("weeks", {}) or {}).get(current_week_key(), {}) if isinstance(incoming, dict) else {}
+        if isinstance(week, dict): save_progress(phone, str(week.get("progress", "")))
+        self.send_json(scoped_state(phone))
 
     def log_message(self, format_string: str, *args) -> None:
         if self.path.startswith("/api/"):
