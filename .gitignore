@@ -1,4 +1,3 @@
-ysyx_shared_state.json
 __pycache__/
 *.pyc
 *.log
@@ -13,7 +12,6 @@ __pycache__/
 /assets/scau-logo.png
 /assets/scau-logo.svg
 /assets/scau-logo-green.svg
-ysyx_state.sqlite3
-ysyx_state.sqlite3-wal
-ysyx_state.sqlite3-shm
-ysyx_state.pre_normalize_backup.sqlite3
+ysyx-study-tracker.sqlite3
+ysyx-study-tracker.sqlite3-wal
+ysyx-study-tracker.sqlite3-shm

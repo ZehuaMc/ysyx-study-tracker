@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>华南农业大学一生一芯学习小组×ICIL创芯实验室｜学习打卡</title>
+  <title>YSYX 学习追踪器｜华南农业大学一生一芯学习小组</title>
   <link rel="icon" href="assets/scau-emblem.png" type="image/png" />
   <style>
     :root {
@@ -1316,7 +1316,7 @@
             <span class="eyebrow">一生一芯学习小组 × ICIL 创芯实验室</span>
           </div>
         </div>
-        <h1 id="loginTitle"><span>华南农业大学</span><span class="mobile-title-line">一生一芯学习打卡</span></h1>
+        <h1 id="loginTitle"><span>YSYX</span><span class="mobile-title-line">学习追踪器</span></h1>
         <p>登录后进入实名学习打卡页面，可查看学习小组成员的学习时间。管理员使用配置的账号和密码进入独立后台。</p>
       </div>
       <div class="login-grid">
@@ -1384,7 +1384,7 @@
               <span class="eyebrow">一生一芯学习小组 × ICIL 创芯实验室</span>
             </div>
           </div>
-          <h1><span>华南农业大学</span><span class="mobile-title-line">一生一芯学习打卡</span></h1>
+          <h1><span>YSYX</span><span class="mobile-title-line">学习追踪器</span></h1>
           <p class="subtitle">
             以时间打卡为主，记录每次学习时段，并自动累计本周、当天与全部学习时间。
           </p>
@@ -1543,7 +1543,7 @@
       </div>
     </section>
 
-      <p class="footer">华南农业大学一生一芯学习小组×ICIL创芯实验室 · 实名学习时间打卡</p>
+      <p class="footer">YSYX 学习追踪器 · 华南农业大学一生一芯学习小组 × ICIL 创芯实验室</p>
     </div>
   </main>
 
@@ -1552,7 +1552,7 @@
       <div class="section-title">
         <div>
           <h1 id="adminTitle">后台管理</h1>
-          <p>管理员可查看账号资料、重置密码、注销账号并导出学习时长汇总。密码只保存哈希，后台不可查看明文。</p>
+          <p>管理员可查看账号资料、重置密码、注销账号，并导出所有周次的逐次打卡时间和提交内容。密码只保存哈希，后台不可查看明文。</p>
         </div>
         <span class="pill amber">管理员</span>
       </div>
@@ -1581,10 +1581,10 @@
         <div class="divider"></div>
         <div class="section-title admin-data-heading">
           <div>
-            <h2>学习时长与导出</h2>
+            <h2>学习时长与逐次打卡导出</h2>
             <p id="adminSortHint">当前按总学习时长从高到低排列</p>
           </div>
-          <button id="exportData" class="btn" type="button">导出 CSV</button>
+          <button id="exportData" class="btn" type="button">导出全部打卡 CSV</button>
         </div>
         <div id="adminSortControl" class="admin-sort-control" role="group" aria-label="学习时长排序方式">
           <button class="admin-sort-button active" data-admin-sort="total" type="button" aria-pressed="true">总学习时长 ↓</button>
@@ -1717,6 +1717,7 @@
     let studentAuthMode = "login";
     let sessionRestoring = Boolean((savedAuthToken || savedAdminToken) && window.location.protocol !== "file:");
     let lastAdminExport = [];
+    let lastAdminRecords = [];
     let adminSort = "total";
     let adminDetailRequestId = 0;
     let adminDetailMutationId = 0;
@@ -1848,6 +1849,7 @@
       adminToken = "";
       localStorage.removeItem(ADMIN_TOKEN_KEY);
       lastAdminExport = [];
+      lastAdminRecords = [];
       authToken = payload.token || "";
       localStorage.setItem(AUTH_TOKEN_KEY, authToken);
       const user = payload.user || {};
@@ -1927,6 +1929,7 @@
       localStorage.removeItem(AUTH_TOKEN_KEY);
       localStorage.removeItem(ADMIN_TOKEN_KEY);
       lastAdminExport = [];
+      lastAdminRecords = [];
       clearAuthInputs();
       persistLocalState();
       render();
@@ -2088,6 +2091,7 @@
       localStorage.removeItem(ADMIN_TOKEN_KEY);
       localStorage.removeItem(AUTH_TOKEN_KEY);
       lastAdminExport = [];
+      lastAdminRecords = [];
       clearAuthInputs();
       persistLocalState();
       render();
@@ -2427,7 +2431,11 @@
           const goal = week.goal || {};
           const runningStart = Number(week.runningStart || 0);
           const runningMs = runningStart > 0 ? Math.max(0, Date.now() - runningStart) : 0;
-          const weekMs = records.reduce((sum, record) => sum + Math.max(0, Number(record.end || 0) - Number(record.start || 0)), 0) + runningMs;
+          const weekStart = weekStartTimestamp(weekKeyValue);
+          const runningWeekMs = runningStart > 0 && weekStart !== null
+            ? durationOverlap(runningStart, Date.now(), weekStart, weekStart + 7 * 24 * 60 * 60 * 1000)
+            : 0;
+          const weekMs = records.reduce((sum, record) => sum + Math.max(0, Number(record.end || 0) - Number(record.start || 0)), 0) + runningWeekMs;
           const runningText = runningStart > 0
             ? '<div class="notice sync-status online">正在打卡：' + escapeHtml(detailDate(runningStart) + " · 已持续 " + formatDuration(runningMs)) + '</div>'
             : "";
@@ -2497,6 +2505,7 @@
       try {
         const payload = await adminRequest("/api/admin/export?sort=" + encodeURIComponent(adminSort));
         const metric = { total: "totalMs", week: "weekMs", day: "dayMs" }[adminSort];
+        lastAdminRecords = Array.isArray(payload.records) ? payload.records.slice() : [];
         lastAdminExport = (payload.rows || []).slice().sort((a, b) => {
           const durationDelta = Number(b[metric] || 0) - Number(a[metric] || 0);
           return durationDelta || String(a.name || "").localeCompare(String(b.name || ""), "zh-CN");
@@ -2513,29 +2522,52 @@
     }
 
     function csvCell(value) {
-      return '"' + String(value == null ? "" : value).replace(/"/g, '""') + '"';
+      let text = String(value == null ? "" : value);
+      if (/^[\t\r ]*[=+\-@]/.test(text)) text = "'" + text;
+      return '"' + text.replace(/"/g, '""') + '"';
     }
 
     function downloadAdminCsv() {
-      if (!lastAdminExport.length) {
+      if (!lastAdminExport.length && !lastAdminRecords.length) {
         showToast("请先加载有数据的导出预览。");
         return;
       }
+      const totalsByPhone = new Map(lastAdminExport.map((rowData) => [String(rowData.phone || ""), rowData]));
+      const phonesWithRecords = new Set(lastAdminRecords.map((record) => String(record.phone || "")));
       const lines = [
-        ["姓名", "班级", "总学习时长", "本周学习时长", "本日学习时长"],
-        ...lastAdminExport.map((rowData) => [
+        ["学号", "姓名", "班级", "全部累计时长", "本周累计时长", "本日累计时长", "打卡周次", "开始时间", "结束时间", "本次学习时长", "记录来源", "本次提交内容"],
+        ...lastAdminRecords.map((record) => {
+          const totals = totalsByPhone.get(String(record.phone || "")) || {};
+          return [
+            record.phone,
+            record.name,
+            record.className,
+            formatHours(totals.totalMs || 0),
+            formatHours(totals.weekMs || 0),
+            formatHours(totals.dayMs || 0),
+            record.weekKey,
+            formatDate(record.start, true),
+            formatDate(record.end, true),
+            formatHours(record.durationMs),
+            record.manual ? "管理员补录" : "正常打卡",
+            record.summary || "未填写"
+          ];
+        }),
+        ...lastAdminExport.filter((rowData) => !phonesWithRecords.has(String(rowData.phone || ""))).map((rowData) => [
+          rowData.phone,
           rowData.name,
           rowData.className,
           formatHours(rowData.totalMs),
           formatHours(rowData.weekMs),
-          formatHours(rowData.dayMs)
+          formatHours(rowData.dayMs),
+          "", "", "", "", "", "暂无已完成打卡"
         ])
       ];
       const csv = "\ufeff" + lines.map((line) => line.map(csvCell).join(",")).join("\r\n");
       const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
       const link = document.createElement("a");
       link.href = url;
-      link.download = "ysyx-study-export-" + getCurrentWeek() + ".csv";
+      link.download = "ysyx-study-records-all-weeks-" + getCurrentWeek() + ".csv";
       link.click();
       URL.revokeObjectURL(url);
     }
@@ -2566,13 +2598,15 @@
     async function syncSharedState() {
       if (!sharedApiEnabled() || !authToken) return false;
       try {
+        const owner = currentUser ? ensureStudent(currentUser) : null;
+        const progress = owner ? currentWeekForStudent(owner).progress : "";
         const response = await fetch("/api/state", {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
             "Authorization": "Bearer " + authToken
           },
-          body: JSON.stringify({ students: state.students })
+          body: JSON.stringify({ progress })
         });
         if (response.status === 401) {
           clearUserSession();
@@ -2772,19 +2806,73 @@
     }
 
     function totalTime(week) {
-      return week.timeRecords.reduce((sum, item) => sum + Math.max(0, item.end - item.start), 0);
+      return week.timeRecords.reduce((sum, item) => {
+        const start = Number(item && item.start);
+        const end = Number(item && item.end);
+        return Number.isFinite(start) && Number.isFinite(end) ? sum + Math.max(0, end - start) : sum;
+      }, 0);
     }
 
-    function weekTotalTime(week, includeRunning = false) {
-      const running = includeRunning && week.runningStart ? Date.now() - week.runningStart : 0;
-      return totalTime(week) + Math.max(0, running);
+    function weekStartTimestamp(key) {
+      const start = new Date(String(key || "") + "T00:00:00");
+      const value = start.getTime();
+      return Number.isFinite(value) ? value : null;
+    }
+
+    function durationOverlap(start, end, periodStart, periodEnd) {
+      return Math.max(0, Math.min(end, periodEnd) - Math.max(start, periodStart));
+    }
+
+    function activeTimerForStudent(student, now = Date.now()) {
+      if (!student || !student.weeks) return null;
+      let active = null;
+      Object.entries(student.weeks).forEach(([key, week]) => {
+        const runningStart = Number(week && week.runningStart);
+        if (!Number.isFinite(runningStart) || runningStart <= 0 || runningStart > now) return;
+        if (!active || runningStart > active.runningStart) {
+          active = { weekKey: key, runningStart };
+        }
+      });
+      return active;
+    }
+
+    function runningDurationForWeek(student, key, now = Date.now()) {
+      const active = activeTimerForStudent(student, now);
+      if (!active) return 0;
+      const start = weekStartTimestamp(key);
+      if (start === null) return key === active.weekKey ? Math.max(0, now - active.runningStart) : 0;
+      return durationOverlap(active.runningStart, now, start, start + 7 * 24 * 60 * 60 * 1000);
+    }
+
+    function weekTotalTime(week, includeRunning = false, key = getCurrentWeek(), student = null) {
+      const running = includeRunning ? runningDurationForWeek(student || (activeStudent ? state.students[activeStudent] : null), key) : 0;
+      return totalTime(week) + running;
     }
 
     function studentTotalTime(student) {
       if (!student || !student.weeks) return 0;
-      return Object.entries(student.weeks).reduce((sum, [key, week]) => {
-        return sum + weekTotalTime(normalizeWeekData(week), key === getCurrentWeek());
+      const completed = Object.values(student.weeks).reduce((sum, week) => {
+        return sum + totalTime(normalizeWeekData(week));
       }, 0);
+      const active = activeTimerForStudent(student);
+      return completed + (active ? Math.max(0, Date.now() - active.runningStart) : 0);
+    }
+
+    function appendLocalTimedSession(student, startMs, endMs, summary = "") {
+      const records = [];
+      let cursor = startMs;
+      while (cursor < endMs) {
+        const key = weekKey(new Date(cursor));
+        const weekStart = weekStartTimestamp(key);
+        if (weekStart === null) break;
+        const segmentEnd = Math.min(endMs, weekStart + 7 * 24 * 60 * 60 * 1000);
+        const week = student.weeks[key] = normalizeWeekData(student.weeks[key] || newWeekData());
+        const record = { id: makeId(), start: cursor, end: segmentEnd, manual: false, summary };
+        week.timeRecords.push(record);
+        records.push(record);
+        cursor = segmentEnd;
+      }
+      return records;
     }
 
     function formatWeekLabel(key) {
@@ -2846,7 +2934,7 @@
         const student = ensureStudent(name);
         const week = currentWeekForStudent(student);
         const summary = overviewRows && overviewRows.find((item) => item.name === name);
-        const weekMs = summary ? summary.weekMs : weekTotalTime(week, true);
+        const weekMs = summary ? summary.weekMs : weekTotalTime(week, true, getCurrentWeek(), student);
         const allMs = summary ? summary.totalMs : studentTotalTime(student);
         const row = document.createElement("tr");
         row.className = name === activeStudent ? "selected" : "";
@@ -2859,7 +2947,7 @@
         const action = document.createElement("button");
         action.className = "mini-btn";
         action.type = "button";
-        const studying = summary ? summary.isStudying : Boolean(week.runningStart);
+        const studying = summary ? summary.isStudying : Boolean(activeTimerForStudent(student));
         action.textContent = studying ? "正在学习" : "未在学习";
         action.classList.toggle("active", studying);
         action.disabled = true;
@@ -2871,17 +2959,19 @@
 
     function renderTime(week) {
       const now = Date.now();
-      const runningMs = week.runningStart ? now - week.runningStart : 0;
-      const totalMs = weekTotalTime(week, true);
-      const allMs = activeStudent ? studentTotalTime(ensureStudent(activeStudent)) : totalMs;
+      const student = activeStudent ? ensureStudent(activeStudent) : null;
+      const active = activeTimerForStudent(student, now);
+      const runningMs = active ? now - active.runningStart : 0;
+      const totalMs = weekTotalTime(week, true, getCurrentWeek(), student);
+      const allMs = student ? studentTotalTime(student) : totalMs;
       const percent = Math.min(100, Math.round((totalMs / WEEKLY_TARGET_MS) * 100));
       const enabled = isOwnProfile();
 
-      els.timerDisplay.textContent = week.runningStart ? formatDuration(runningMs) : "00:00:00";
-      els.timerLabel.textContent = week.runningStart
-        ? "本次开始于 " + formatDate(week.runningStart, true)
+      els.timerDisplay.textContent = active ? formatDuration(runningMs) : "00:00:00";
+      els.timerLabel.textContent = active
+        ? "本次开始于 " + formatDate(active.runningStart, true)
         : enabled ? "当前未开始" : activeStudent ? "查看模式：仅可阅读" : "请先进入自己的主页";
-      els.timerButton.textContent = week.runningStart ? "结束打卡" : "开始打卡";
+      els.timerButton.textContent = active ? "结束打卡" : "开始打卡";
       els.timerButton.disabled = !enabled || timerRequestPending;
       els.timeTotal.textContent = "已累计 " + formatHours(totalMs);
       els.timePercent.textContent = percent + "%";
@@ -2921,7 +3011,7 @@
       Object.keys(student.weeks).sort((a, b) => b.localeCompare(a)).forEach((key) => {
         const week = normalizeWeekData(student.weeks[key]);
         const isCurrentWeek = key === currentKey;
-        const total = weekTotalTime(week, isCurrentWeek);
+        const total = weekTotalTime(week, true, key, student);
         const complete = total >= WEEKLY_TARGET_MS;
         const row = document.createElement("div");
         row.className = "record";
@@ -3150,7 +3240,9 @@
         return;
       }
       if (timerRequestPending) return;
-      const stoppingTimer = Boolean(currentWeekData().runningStart);
+      const student = activeStudent ? ensureStudent(activeStudent) : null;
+      const activeTimer = activeTimerForStudent(student);
+      const stoppingTimer = Boolean(activeTimer);
       let sessionSummary = "";
       if (stoppingTimer) {
         while (!sessionSummary) {
@@ -3195,21 +3287,18 @@
         }
         return;
       }
+      const owner = activeStudent ? ensureStudent(activeStudent) : null;
+      const active = activeTimerForStudent(owner);
       const week = currentWeekData();
-      if (week.runningStart) {
+      if (active && owner) {
         const end = Date.now();
-        if (end - week.runningStart < 60000) {
+        if (end - active.runningStart < 60000) {
           showToast("本次学习不足 1 分钟，已结束但不计入记录。");
         } else {
-          week.timeRecords.push({
-            id: makeId(),
-            start: week.runningStart,
-            end,
-            manual: false
-            ,summary: sessionSummary
-          });
+          appendLocalTimedSession(owner, active.runningStart, end, sessionSummary);
         }
-        week.runningStart = null;
+        owner.weeks[active.weekKey] = normalizeWeekData(owner.weeks[active.weekKey]);
+        owner.weeks[active.weekKey].runningStart = null;
       } else {
         week.runningStart = Date.now();
       }
@@ -3292,7 +3381,8 @@
 
     window.setInterval(() => {
       const week = activeStudent ? currentWeekData() : newWeekData();
-      if (week.runningStart) renderTime(week);
+      const student = activeStudent ? state.students[activeStudent] : null;
+      if (activeTimerForStudent(student)) renderTime(week);
     }, 1000);
 
     window.setInterval(refreshSharedState, 5000);
@@ -3301,8 +3391,8 @@
     }, 15000);
 
     window.addEventListener("beforeunload", (event) => {
-      const week = activeStudent ? currentWeekData() : null;
-      if (week && week.runningStart) {
+      const student = activeStudent ? state.students[activeStudent] : null;
+      if (activeTimerForStudent(student)) {
         event.preventDefault();
         event.returnValue = "当前学习计时仍在进行，确定要离开吗？";
       }

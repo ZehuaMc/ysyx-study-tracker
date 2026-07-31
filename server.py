@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Shared server for the SCAU ysyx check-in page."""
+"""Server for the SCAU YSYX Study Tracker."""
 
 from __future__ import annotations
 
@@ -24,11 +24,13 @@ from urllib.parse import parse_qs, unquote, urlparse
 
 
 ROOT = Path(__file__).resolve().parent
-DATA_FILE = Path(os.environ.get("YSYX_DATA_FILE", str(ROOT / "ysyx_shared_state.json")))
-DB_FILE = Path(os.environ.get("YSYX_DB_FILE", str(ROOT / "ysyx_state.sqlite3")))
+DB_FILE = Path(
+    os.environ.get("YSYX_DB_FILE", str(ROOT / "ysyx-study-tracker.sqlite3"))
+)
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "admin123456")
 ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME", "admin")
 RESET_PASSWORD = "123456"
+MAX_JSON_BODY_BYTES = 64 * 1024
 SHANGHAI_TZ = timezone(timedelta(hours=8), name="Asia/Shanghai")
 DATA_LOCK = threading.Lock()
 USER_SESSIONS: dict[str, str] = {}
@@ -50,22 +52,9 @@ def init_db(db: sqlite3.Connection) -> None:
       CREATE TABLE IF NOT EXISTS students (name TEXT PRIMARY KEY, phone TEXT NOT NULL, class_name TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS weeks (student_name TEXT NOT NULL, week_key TEXT NOT NULL, progress TEXT NOT NULL DEFAULT '', running_start INTEGER, PRIMARY KEY(student_name, week_key));
       CREATE TABLE IF NOT EXISTS time_records (id TEXT PRIMARY KEY, student_name TEXT NOT NULL, week_key TEXT NOT NULL, start_ms INTEGER NOT NULL, end_ms INTEGER, manual INTEGER NOT NULL DEFAULT 0, summary TEXT NOT NULL DEFAULT '');
-      CREATE TABLE IF NOT EXISTS metadata (key TEXT PRIMARY KEY, value TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS sessions (token TEXT PRIMARY KEY, kind TEXT NOT NULL, subject TEXT NOT NULL, expires_at INTEGER NOT NULL);
       CREATE INDEX IF NOT EXISTS idx_records_student ON time_records(student_name, start_ms);
     """)
-
-
-def load_legacy_state(db: sqlite3.Connection) -> dict:
-    value = default_state()
-    row = db.execute("SELECT payload FROM app_state WHERE id=1").fetchone() if db.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='app_state'").fetchone() else None
-    if row:
-        try: value = json.loads(row[0])
-        except json.JSONDecodeError: pass
-    elif DATA_FILE.exists():
-        try: value = json.loads(DATA_FILE.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError): pass
-    return value if isinstance(value, dict) else default_state()
 
 
 def write_normalized(db: sqlite3.Connection, value: dict) -> None:
@@ -86,7 +75,8 @@ def write_normalized(db: sqlite3.Connection, value: dict) -> None:
             for record in week.get("timeRecords", []) or []:
                 if isinstance(record, dict):
                     rid = str(record.get("id", secrets.token_urlsafe(12))); seen_records.add(rid)
-                    db.execute("INSERT INTO time_records VALUES(?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET student_name=excluded.student_name,week_key=excluded.week_key,start_ms=excluded.start_ms,end_ms=excluded.end_ms,manual=excluded.manual,summary=excluded.summary", (rid, name, week_key, int(record.get("start", 0)), record.get("end"), int(bool(record.get("manual"))), str(record.get("summary", ""))))
+                    record_values = (rid, name, week_key, int(record.get("start", 0)), record.get("end"), int(bool(record.get("manual"))), str(record.get("summary", "")))
+                    db.execute("INSERT INTO time_records VALUES(?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET student_name=excluded.student_name,week_key=excluded.week_key,start_ms=excluded.start_ms,end_ms=excluded.end_ms,manual=excluded.manual,summary=excluded.summary", record_values)
     if seen_users: db.execute("DELETE FROM users WHERE phone NOT IN (%s)" % ",".join("?" * len(seen_users)), tuple(seen_users))
     else: db.execute("DELETE FROM users")
     if seen_students: db.execute("DELETE FROM students WHERE name NOT IN (%s)" % ",".join("?" * len(seen_students)), tuple(seen_students))
@@ -101,12 +91,6 @@ def read_state() -> dict:
     DB_FILE.parent.mkdir(parents=True, exist_ok=True)
     with sqlite3.connect(DB_FILE) as db:
         init_db(db)
-        migrated = db.execute("SELECT value FROM metadata WHERE key='normalized_migration'").fetchone()
-        if not migrated:
-            write_normalized(db, load_legacy_state(db))
-            db.execute("INSERT OR REPLACE INTO metadata VALUES('normalized_migration','1')")
-        db.execute("DROP TABLE IF EXISTS app_state")
-        db.commit()
         value = default_state()
         for phone, name, cls, pwd, created in db.execute("SELECT phone,name,class_name,password_hash,created_at FROM users"):
             value["users"][phone] = {"phone": phone, "name": name, "className": cls, "passwordHash": pwd, "createdAt": created}
@@ -131,16 +115,32 @@ def read_overview() -> list[dict]:
     """Read only roster aggregates; historical records stay in SQLite."""
     week_key = current_week_key()
     now_ms = int(time.time() * 1000)
+    current_now = datetime.now(SHANGHAI_TZ)
+    current_week_start = week_start_ms(current_now)
+    current_week_end = current_week_start + 7 * 24 * 60 * 60 * 1000
+    current_day_start = day_start_ms(current_now)
+    current_day_end = current_day_start + 24 * 60 * 60 * 1000
     with sqlite3.connect(DB_FILE) as db:
         init_db(db)
         rows = []
         for name, cls in db.execute("SELECT name,class_name FROM students ORDER BY name"):
             total = db.execute("SELECT COALESCE(SUM(end_ms-start_ms),0) FROM time_records WHERE student_name=? AND end_ms IS NOT NULL", (name,)).fetchone()[0]
             week = db.execute("SELECT COALESCE(SUM(end_ms-start_ms),0) FROM time_records WHERE student_name=? AND week_key=? AND end_ms IS NOT NULL", (name, week_key)).fetchone()[0]
-            running = db.execute("SELECT running_start FROM weeks WHERE student_name=? AND week_key=?", (name, week_key)).fetchone()
-            running_start = running[0] if running and running[0] else None
-            running_ms = max(0, now_ms - running_start) if running_start else 0
-            rows.append({"name": name, "className": cls, "totalMs": total + running_ms, "weekMs": week + running_ms, "dayMs": 0, "isStudying": bool(running_start), "runningStart": running_start, "runningDurationMs": running_ms})
+            day = sum(
+                duration_overlap(int(start), int(end), current_day_start, current_day_end)
+                for start, end in db.execute(
+                    "SELECT start_ms,end_ms FROM time_records WHERE student_name=? AND end_ms IS NOT NULL",
+                    (name,),
+                )
+                if end is not None and int(end) > int(start)
+            )
+            running_rows = db.execute("SELECT running_start FROM weeks WHERE student_name=? AND running_start IS NOT NULL", (name,)).fetchall()
+            running_starts = [int(row[0]) for row in running_rows if row[0] and 0 < int(row[0]) <= now_ms]
+            running_start = max(running_starts, default=None)
+            running_ms = sum(max(0, now_ms - start) for start in running_starts)
+            week_running_ms = sum(duration_overlap(start, now_ms, current_week_start, current_week_end) for start in running_starts)
+            day_running_ms = sum(duration_overlap(start, now_ms, current_day_start, current_day_end) for start in running_starts)
+            rows.append({"name": name, "className": cls, "totalMs": total + running_ms, "weekMs": week + week_running_ms, "dayMs": day + day_running_ms, "isStudying": bool(running_start), "runningStart": running_start, "runningDurationMs": running_ms})
         return rows
 
 
@@ -517,9 +517,16 @@ def save_session(token: str, kind: str, subject: str) -> None:
         db.commit()
 
 
-def parse_json_body(handler: SimpleHTTPRequestHandler) -> dict:
+def parse_json_body(
+    handler: SimpleHTTPRequestHandler, max_bytes: int = MAX_JSON_BODY_BYTES
+) -> dict:
     length = int(handler.headers.get("Content-Length", "0"))
-    return json.loads(handler.rfile.read(length).decode("utf-8")) if length else {}
+    if length < 0 or length > max_bytes:
+        raise ValueError("JSON payload is too large")
+    value = json.loads(handler.rfile.read(length).decode("utf-8")) if length else {}
+    if not isinstance(value, dict):
+        raise ValueError("JSON payload must be an object")
+    return value
 
 
 def ms(value: object) -> int | None:
@@ -981,6 +988,53 @@ def export_rows(state: dict, sort_key: str) -> list[dict]:
     return rows
 
 
+def export_time_records(state: dict) -> list[dict]:
+    """Return every completed check-in across every student and week.
+
+    A timer that crosses a Monday boundary is stored as one record per week,
+    so each returned row represents the exact weekly segment that was counted.
+    """
+    users = state.get("users", {})
+    students = state.get("students", {})
+    records = []
+    if not isinstance(users, dict) or not isinstance(students, dict):
+        return records
+
+    for phone, user in users.items():
+        if not isinstance(user, dict):
+            continue
+        name = str(user.get("name", "")).strip() or str(phone)
+        student = students.get(name, {})
+        weeks = student.get("weeks", {}) if isinstance(student, dict) else {}
+        if not isinstance(weeks, dict):
+            continue
+        for week_key, week in weeks.items():
+            if not isinstance(week, dict) or not isinstance(week.get("timeRecords"), list):
+                continue
+            normalized_week_key = valid_week_key(week_key) or str(week_key)
+            for record in week["timeRecords"]:
+                if not isinstance(record, dict):
+                    continue
+                start_ms = finite_epoch_ms(record.get("start"))
+                end_ms = finite_epoch_ms(record.get("end"))
+                if start_ms is None or end_ms is None or end_ms <= start_ms:
+                    continue
+                records.append({
+                    "phone": str(phone),
+                    "name": name,
+                    "className": str(user.get("className", "")),
+                    "weekKey": normalized_week_key,
+                    "recordId": item_id(record),
+                    "start": start_ms,
+                    "end": end_ms,
+                    "durationMs": end_ms - start_ms,
+                    "manual": bool(record.get("manual")),
+                    "summary": str(record.get("summary", "")).strip(),
+                })
+    records.sort(key=lambda row: (row["start"], row["name"], row["recordId"]), reverse=True)
+    return records
+
+
 class CheckinHandler(SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=str(ROOT), **kwargs)
@@ -1075,8 +1129,10 @@ class CheckinHandler(SimpleHTTPRequestHandler):
                 return
             sort_key = parse_qs(parsed.query).get("sort", ["total"])[0]
             with DATA_LOCK:
-                rows = export_rows(read_state(), sort_key)
-            self.send_json({"rows": rows, "sort": sort_key})
+                state = read_state()
+                rows = export_rows(state, sort_key)
+                records = export_time_records(state)
+            self.send_json({"rows": rows, "records": records, "sort": sort_key})
             return
         if parsed.path == "/api/admin/student-detail":
             if not self.require_admin():
@@ -1119,10 +1175,11 @@ class CheckinHandler(SimpleHTTPRequestHandler):
                 return
             user = {"phone": phone, "name": name, "className": class_name, "passwordHash": hash_password(password), "createdAt": now_iso()}
             try:
-                with sqlite3.connect(DB_FILE) as db:
-                    init_db(db)
-                    db.execute("INSERT INTO users VALUES(?,?,?,?,?)", (phone, name, class_name, user["passwordHash"], user["createdAt"]))
-                    db.execute("INSERT INTO students VALUES(?,?,?)", (name, phone, class_name)); db.commit()
+                with DATA_LOCK:
+                    with sqlite3.connect(DB_FILE) as db:
+                        init_db(db)
+                        db.execute("INSERT INTO users VALUES(?,?,?,?,?)", (phone, name, class_name, user["passwordHash"], user["createdAt"]))
+                        db.execute("INSERT INTO students VALUES(?,?,?)", (name, phone, class_name)); db.commit()
             except sqlite3.IntegrityError:
                 self.send_json({"error": "该学号或姓名已经注册"}, 409); return
             token = secrets.token_urlsafe(32)
@@ -1205,13 +1262,17 @@ class CheckinHandler(SimpleHTTPRequestHandler):
                 self.send_json({"error": "student unauthorized"}, 401)
                 return
             try:
-                result = toggle_timer(phone, str(payload.get("summary", "")).strip())
+                with DATA_LOCK:
+                    result = toggle_timer(phone, str(payload.get("summary", "")).strip())
+                    response_state = scoped_state(phone)
             except ValueError as error:
                 self.send_json({"error": str(error)}, 400); return
+            except LookupError:
+                self.send_json({"error": "student unauthorized"}, 401); return
             self.send_json({
                 "ok": True,
                 **result,
-                "state": scoped_state(phone),
+                "state": response_state,
             })
             return
 
@@ -1406,9 +1467,9 @@ class CheckinHandler(SimpleHTTPRequestHandler):
             return
         try:
             payload = parse_json_body(self)
-            students = payload.get("students")
-            if not isinstance(students, dict):
-                raise ValueError("students must be an object")
+            progress = payload.get("progress")
+            if not isinstance(progress, str):
+                raise ValueError("progress must be a string")
         except (ValueError, TypeError, json.JSONDecodeError):
             self.send_json({"error": "invalid JSON payload"}, 400)
             return
@@ -1417,20 +1478,14 @@ class CheckinHandler(SimpleHTTPRequestHandler):
         if not loaded:
             self.send_json({"error": "登录已失效，请重新登录"}, 401)
             return
-        owner_name = loaded[0]["name"]
-        incoming = students.get(owner_name, {})
-        week = (incoming.get("weeks", {}) or {}).get(current_week_key(), {}) if isinstance(incoming, dict) else {}
-        if isinstance(week, dict): save_progress(phone, str(week.get("progress", "")))
-        self.send_json(scoped_state(phone))
+        with DATA_LOCK:
+            save_progress(phone, progress)
+            response_state = scoped_state(phone)
+        self.send_json(response_state)
 
     def log_message(self, format_string: str, *args) -> None:
         if self.path.startswith("/api/"):
             super().log_message(format_string, *args)
-
-
-def clean_phone(value: object) -> str:
-    return "".join(ch for ch in str(value or "") if ch.isdigit())
-
 
 def local_ip() -> str:
     try:
@@ -1447,8 +1502,10 @@ def main() -> None:
     host = os.environ.get("HOST") or (sys.argv[1] if len(sys.argv) > 1 else "0.0.0.0")
     configured_port = os.environ.get("PORT") or (sys.argv[2] if len(sys.argv) > 2 else "8000")
     port = int(configured_port)
+    with DATA_LOCK:
+        read_state()
     server = ThreadingHTTPServer((host, port), CheckinHandler)
-    print("华南农业大学一生一芯学习打卡共享服务已启动")
+    print("YSYX 学习追踪器服务已启动")
     print(f"本机访问：http://127.0.0.1:{port}/")
     print(f"同一局域网访问：http://{local_ip()}:{port}/")
     print(f"管理员账号：{ADMIN_USERNAME}（密码通过 ADMIN_PASSWORD 环境变量配置）")
