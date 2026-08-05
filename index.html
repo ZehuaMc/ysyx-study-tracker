@@ -1932,6 +1932,10 @@
       lastAdminRecords = [];
       clearAuthInputs();
       persistLocalState();
+      window.parent.postMessage(
+   { type: "sticker-logout" },
+    "*"
+  );
       render();
     }
 
@@ -1954,6 +1958,10 @@
           body: JSON.stringify({ phone, password })
         });
         applyUserPayload(payload);
+        window.parent.postMessage(
+        { type: "sticker-login-success" },
+        "*"
+      );
         showToast("登录成功，已进入你的学习主页。");
       } catch (error) {
         showToast(error.message);
@@ -1991,6 +1999,10 @@
           body: JSON.stringify({ phone, password, confirmPassword, name, className })
         });
         applyUserPayload(payload);
+        window.parent.postMessage(
+        { type: "sticker-login-success" },
+        "*"
+      );
         showToast("注册成功，已登录。");
       } catch (error) {
         showToast(error.message);
@@ -3270,6 +3282,14 @@
           state.users = (payload.state && payload.state.users) || state.users;
           overviewRows = null;
           persistLocalState();
+          window.parent.postMessage(
+          {
+            type: stoppingTimer
+            ? "sticker-timer-stop"
+            : "sticker-timer-start"
+          },
+            "*"
+          );
           if (payload.discarded) {
             showToast("本次学习不足 1 分钟，已结束但不计入记录。");
           }
@@ -3303,6 +3323,14 @@
         week.runningStart = Date.now();
       }
       saveState();
+      window.parent.postMessage(
+    {
+      type: stoppingTimer
+      ? "sticker-timer-stop"
+      : "sticker-timer-start"
+    },
+       "*"
+    );
       render();
     });
 
