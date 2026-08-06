@@ -1634,6 +1634,32 @@
     const ADMIN_TOKEN_KEY = "scau_ysyx_admin_token_v1";
     const WEEKLY_TARGET_MS = 15 * 60 * 60 * 1000;
     const $ = (id) => document.getElementById(id);
+    const STICKER_ORIGIN = "https://h-0528.github.io";
+
+function notifySticker(type, data = {}) {
+  const frame = document.getElementById("stickerOverlay");
+  if (!frame || !frame.contentWindow) return;
+
+  frame.contentWindow.postMessage(
+    { type, ...data },
+    STICKER_ORIGIN
+  );
+}
+
+function syncStickerState() {
+  let type = "sticker-logout";
+
+  if (adminToken) {
+    type = "sticker-login-success";
+  } else if (authToken) {
+    const student = currentUser ? state.students[currentUser] : null;
+    type = activeTimerForStudent(student)
+      ? "sticker-timer-start"
+      : "sticker-login-success";
+  }
+
+  notifySticker(type);
+}
 
     const els = {
       loginScreen: $("loginScreen"),
@@ -1932,6 +1958,7 @@
       lastAdminRecords = [];
       clearAuthInputs();
       persistLocalState();
+      
       render();
     }
 
@@ -1954,6 +1981,7 @@
           body: JSON.stringify({ phone, password })
         });
         applyUserPayload(payload);
+        
         showToast("登录成功，已进入你的学习主页。");
       } catch (error) {
         showToast(error.message);
@@ -1991,6 +2019,7 @@
           body: JSON.stringify({ phone, password, confirmPassword, name, className })
         });
         applyUserPayload(payload);
+        
         showToast("注册成功，已登录。");
       } catch (error) {
         showToast(error.message);
@@ -3183,6 +3212,7 @@
       renderQuestions(week);
       renderSyncStatus();
       renderAdmin();
+      syncStickerState();
     }
 
     els.loginButton.addEventListener("click", loginUser);
@@ -3270,6 +3300,7 @@
           state.users = (payload.state && payload.state.users) || state.users;
           overviewRows = null;
           persistLocalState();
+          
           if (payload.discarded) {
             showToast("本次学习不足 1 分钟，已结束但不计入记录。");
           }
@@ -3303,6 +3334,7 @@
         week.runningStart = Date.now();
       }
       saveState();
+      
       render();
     });
 
@@ -3397,7 +3429,19 @@
         event.returnValue = "当前学习计时仍在进行，确定要离开吗？";
       }
     });
+    document.addEventListener(
+  "pointerdown",
+  (event) => {
+    if (!event.isPrimary) return;
 
+    notifySticker("sticker-burst", {
+      x: event.clientX / window.innerWidth,
+      y: event.clientY / window.innerHeight,
+    });
+  },
+  { passive: true }
+);
+    window.addEventListener("load", syncStickerState);
     if (sessionRestoring) {
       render();
       restoreSavedSession();
@@ -3405,5 +3449,22 @@
       clearUserSession();
     }
   </script>
+  <iframe
+  id="stickerOverlay"
+  src="https://h-0528.github.io/sticker-rain/overlay.html"
+  title="Sticker overlay"
+  aria-hidden="true"
+  tabindex="-1"
+  style="
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    background: transparent;
+    pointer-events: none;
+    z-index: 9999;
+  "
+></iframe>
 </body>
 </html>
