@@ -1636,12 +1636,12 @@
     const $ = (id) => document.getElementById(id);
     const STICKER_ORIGIN = "https://h-0528.github.io";
 
-function notifySticker(type) {
+function notifySticker(type, data = {}) {
   const frame = document.getElementById("stickerOverlay");
   if (!frame || !frame.contentWindow) return;
 
   frame.contentWindow.postMessage(
-    { type },
+    { type, ...data },
     STICKER_ORIGIN
   );
 }
@@ -3429,6 +3429,18 @@ function syncStickerState() {
         event.returnValue = "当前学习计时仍在进行，确定要离开吗？";
       }
     });
+    document.addEventListener(
+  "pointerdown",
+  (event) => {
+    if (!event.isPrimary) return;
+
+    notifySticker("sticker-burst", {
+      x: event.clientX / window.innerWidth,
+      y: event.clientY / window.innerHeight,
+    });
+  },
+  { passive: true }
+);
     window.addEventListener("load", syncStickerState);
     if (sessionRestoring) {
       render();
