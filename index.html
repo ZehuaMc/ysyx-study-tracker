@@ -1298,6 +1298,15 @@
         display: grid;
       }
     }
+    .fireworks-button {
+  align-self: stretch;
+  width: 44px;
+  min-width: 44px;
+  padding: 0;
+  flex: 0 0 44px;
+  font-size: 20px;
+  line-height: 1;
+}
   </style>
 </head>
 <body>
@@ -1400,6 +1409,16 @@
               <b id="timerDisplay">00:00:00</b>
             </div>
             <button id="timerButton" class="btn">开始打卡</button>
+            <button
+  id="fireworksButton"
+  class="btn fireworks-button"
+  type="button"
+  title="播放烟花"
+  aria-label="播放烟花"
+  hidden
+>
+  🎆
+</button>
           </div>
           <div class="progress-wrap">
             <div class="progress-label">
@@ -1689,6 +1708,7 @@ function syncStickerState() {
       timerLabel: $("timerLabel"),
       timerDisplay: $("timerDisplay"),
       timerButton: $("timerButton"),
+      fireworksButton: $("fireworksButton"),
       timeTotal: $("timeTotal"),
       timePercent: $("timePercent"),
       timeBar: $("timeBar"),
@@ -1754,6 +1774,7 @@ function syncStickerState() {
     let syncPending = false;
     let sharedStateRevision = 0;
     let timerRequestPending = false;
+    let previousWeeklyTotalMs = null;
     let apiOnline = window.location.protocol !== "file:" ? null : false;
 
     const ADMIN_SORT_LABELS = {
@@ -2995,6 +3016,19 @@ function syncStickerState() {
       const allMs = student ? studentTotalTime(student) : totalMs;
       const percent = Math.min(100, Math.round((totalMs / WEEKLY_TARGET_MS) * 100));
       const enabled = isOwnProfile();
+      const reachedWeeklyTarget = totalMs >= WEEKLY_TARGET_MS;
+
+els.fireworksButton.hidden = !enabled || !reachedWeeklyTarget;
+
+if (
+  previousWeeklyTotalMs !== null &&
+  previousWeeklyTotalMs < WEEKLY_TARGET_MS &&
+  reachedWeeklyTarget
+) {
+  notifySticker("sticker-timer-complete");
+}
+
+previousWeeklyTotalMs = totalMs;
 
       els.timerDisplay.textContent = active ? formatDuration(runningMs) : "00:00:00";
       els.timerLabel.textContent = active
@@ -3296,6 +3330,9 @@ function syncStickerState() {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ summary: sessionSummary })
           });
+          els.fireworksButton.addEventListener("click", () => {
+  notifySticker("sticker-fireworks");
+});
           state.students = (payload.state && payload.state.students) || state.students;
           state.users = (payload.state && payload.state.users) || state.users;
           overviewRows = null;
