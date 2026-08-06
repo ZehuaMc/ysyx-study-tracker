@@ -1634,6 +1634,32 @@
     const ADMIN_TOKEN_KEY = "scau_ysyx_admin_token_v1";
     const WEEKLY_TARGET_MS = 15 * 60 * 60 * 1000;
     const $ = (id) => document.getElementById(id);
+    const STICKER_ORIGIN = "https://h-0528.github.io";
+
+function notifySticker(type) {
+  const frame = document.getElementById("stickerOverlay");
+  if (!frame || !frame.contentWindow) return;
+
+  frame.contentWindow.postMessage(
+    { type },
+    STICKER_ORIGIN
+  );
+}
+
+function syncStickerState() {
+  let type = "sticker-logout";
+
+  if (adminToken) {
+    type = "sticker-login-success";
+  } else if (authToken) {
+    const student = currentUser ? state.students[currentUser] : null;
+    type = activeTimerForStudent(student)
+      ? "sticker-timer-start"
+      : "sticker-login-success";
+  }
+
+  notifySticker(type);
+}
 
     const els = {
       loginScreen: $("loginScreen"),
@@ -1932,10 +1958,7 @@
       lastAdminRecords = [];
       clearAuthInputs();
       persistLocalState();
-      window.parent.postMessage(
-   { type: "sticker-logout" },
-    "*"
-  );
+      
       render();
     }
 
@@ -1958,10 +1981,7 @@
           body: JSON.stringify({ phone, password })
         });
         applyUserPayload(payload);
-        window.parent.postMessage(
-        { type: "sticker-login-success" },
-        "*"
-      );
+        
         showToast("登录成功，已进入你的学习主页。");
       } catch (error) {
         showToast(error.message);
@@ -1999,10 +2019,7 @@
           body: JSON.stringify({ phone, password, confirmPassword, name, className })
         });
         applyUserPayload(payload);
-        window.parent.postMessage(
-        { type: "sticker-login-success" },
-        "*"
-      );
+        
         showToast("注册成功，已登录。");
       } catch (error) {
         showToast(error.message);
@@ -3195,6 +3212,7 @@
       renderQuestions(week);
       renderSyncStatus();
       renderAdmin();
+      syncStickerState();
     }
 
     els.loginButton.addEventListener("click", loginUser);
@@ -3282,14 +3300,7 @@
           state.users = (payload.state && payload.state.users) || state.users;
           overviewRows = null;
           persistLocalState();
-          window.parent.postMessage(
-          {
-            type: stoppingTimer
-            ? "sticker-timer-stop"
-            : "sticker-timer-start"
-          },
-            "*"
-          );
+          
           if (payload.discarded) {
             showToast("本次学习不足 1 分钟，已结束但不计入记录。");
           }
@@ -3323,14 +3334,7 @@
         week.runningStart = Date.now();
       }
       saveState();
-      window.parent.postMessage(
-    {
-      type: stoppingTimer
-      ? "sticker-timer-stop"
-      : "sticker-timer-start"
-    },
-       "*"
-    );
+      
       render();
     });
 
@@ -3425,7 +3429,7 @@
         event.returnValue = "当前学习计时仍在进行，确定要离开吗？";
       }
     });
-
+    window.addEventListener("load", syncStickerState);
     if (sessionRestoring) {
       render();
       restoreSavedSession();
