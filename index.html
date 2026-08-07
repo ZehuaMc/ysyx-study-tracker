@@ -3377,10 +3377,21 @@ previousWeeklyTotalMs = totalMs;
     });
 
     window.addEventListener("keydown", (event) => {
-      if (event.code === "Space") {
-        notifySticker("sticker-fireworks-stop");
-      }
-    });
+  if (event.code !== "Space" || event.repeat) return;
+
+  const target = event.target;
+  const typing =
+    target instanceof HTMLInputElement ||
+    target instanceof HTMLTextAreaElement ||
+    target instanceof HTMLSelectElement ||
+    target?.isContentEditable;
+
+  if (!typing) {
+    event.preventDefault();
+  }
+
+  notifySticker("sticker-fireworks-stop");
+});
 
     els.saveProgress.addEventListener("click", () => {
       if (!isOwnProfile()) {
