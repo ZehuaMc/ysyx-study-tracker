@@ -3330,9 +3330,7 @@ previousWeeklyTotalMs = totalMs;
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ summary: sessionSummary })
           });
-          els.fireworksButton.addEventListener("click", () => {
-  notifySticker("sticker-fireworks");
-});
+          
           state.students = (payload.state && payload.state.students) || state.students;
           state.users = (payload.state && payload.state.users) || state.users;
           overviewRows = null;
@@ -3373,6 +3371,15 @@ previousWeeklyTotalMs = totalMs;
       saveState();
       
       render();
+    });
+        els.fireworksButton.addEventListener("click", () => {
+      notifySticker("sticker-fireworks");
+    });
+
+    window.addEventListener("keydown", (event) => {
+      if (event.code === "Space") {
+        notifySticker("sticker-fireworks-stop");
+      }
     });
 
     els.saveProgress.addEventListener("click", () => {
