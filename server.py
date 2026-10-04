@@ -31,6 +31,10 @@ ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "admin123456")
 ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME", "admin")
 RESET_PASSWORD = "123456"
 MAX_JSON_BODY_BYTES = 64 * 1024
+MIN_TIMER_DURATION_MS = 60 * 1000
+MAX_TIMER_DURATION_MS = 5 * 60 * 60 * 1000
+PAGE_EXIT_PAUSE_SUMMARY = "离开打卡页面，已自动暂停"
+MAX_DURATION_PAUSE_SUMMARY = "达到 5 小时上限，已自动暂停"
 SHANGHAI_TZ = timezone(timedelta(hours=8), name="Asia/Shanghai")
 DATA_LOCK = threading.Lock()
 USER_SESSIONS: dict[str, str] = {}
@@ -88,6 +92,7 @@ def write_normalized(db: sqlite3.Connection, value: dict) -> None:
 
 
 def read_state() -> dict:
+    pause_overdue_timers()
     DB_FILE.parent.mkdir(parents=True, exist_ok=True)
     with sqlite3.connect(DB_FILE) as db:
         init_db(db)
@@ -111,8 +116,96 @@ def write_state(value: dict) -> None:
         db.commit()
 
 
+def _append_completed_timer_records(
+    db: sqlite3.Connection,
+    student_name: str,
+    start_ms: int,
+    end_ms: int,
+    summary: str,
+) -> list[dict]:
+    """Persist a completed timer, splitting it at Shanghai week boundaries."""
+    records = []
+    if end_ms - start_ms < MIN_TIMER_DURATION_MS:
+        return records
+    cursor = start_ms
+    while cursor < end_ms:
+        moment = datetime.fromtimestamp(cursor / 1000, SHANGHAI_TZ)
+        key = current_week_key(moment)
+        monday = moment.replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=moment.weekday())
+        segment_end = min(end_ms, int((monday + timedelta(days=7)).timestamp() * 1000))
+        rid = "record-" + secrets.token_urlsafe(16)
+        db.execute(
+            "INSERT OR IGNORE INTO weeks(student_name,week_key,progress,running_start) VALUES(?,?,?,NULL)",
+            (student_name, key, ""),
+        )
+        db.execute(
+            "INSERT INTO time_records VALUES(?,?,?,?,?,?,?)",
+            (rid, student_name, key, cursor, segment_end, 0, summary[:500]),
+        )
+        records.append({
+            "id": rid,
+            "start": cursor,
+            "end": segment_end,
+            "manual": False,
+            "summary": summary[:500],
+        })
+        cursor = segment_end
+    return records
+
+
+def _pause_running_row(
+    db: sqlite3.Connection,
+    student_name: str,
+    week_key: str,
+    start_ms: int,
+    now_ms: int,
+    summary: str,
+) -> dict:
+    """Close one running row and cap the saved interval at five hours."""
+    end_ms = min(now_ms, start_ms + MAX_TIMER_DURATION_MS)
+    db.execute(
+        "UPDATE weeks SET running_start=NULL WHERE student_name=? AND week_key=? AND running_start=?",
+        (student_name, week_key, start_ms),
+    )
+    records = _append_completed_timer_records(db, student_name, start_ms, end_ms, summary)
+    return {
+        "discarded": end_ms - start_ms < MIN_TIMER_DURATION_MS,
+        "records": records,
+        "end": end_ms,
+    }
+
+
+def pause_overdue_timers(now_ms: int | None = None) -> int:
+    """Lazily pause timers that have reached the five-hour session limit."""
+    now_ms = int(time.time() * 1000) if now_ms is None else int(now_ms)
+    cutoff = now_ms - MAX_TIMER_DURATION_MS
+    DB_FILE.parent.mkdir(parents=True, exist_ok=True)
+    paused = 0
+    with sqlite3.connect(DB_FILE) as db:
+        init_db(db)
+        db.execute("BEGIN IMMEDIATE")
+        rows = db.execute(
+            "SELECT student_name,week_key,running_start FROM weeks "
+            "WHERE running_start IS NOT NULL AND running_start>0 AND running_start<=?",
+            (cutoff,),
+        ).fetchall()
+        for student_name, week_key, running_start in rows:
+            result = _pause_running_row(
+                db,
+                str(student_name),
+                str(week_key),
+                int(running_start),
+                now_ms,
+                MAX_DURATION_PAUSE_SUMMARY,
+            )
+            paused += 1
+        db.commit()
+    return paused
+
+
 def read_overview() -> list[dict]:
     """Read only roster aggregates; historical records stay in SQLite."""
+    pause_overdue_timers()
     week_key = current_week_key()
     now_ms = int(time.time() * 1000)
     current_now = datetime.now(SHANGHAI_TZ)
@@ -162,6 +255,7 @@ def read_user_and_student(phone: str) -> tuple[dict, dict] | None:
 
 
 def scoped_state(phone: str) -> dict:
+    pause_overdue_timers()
     loaded = read_user_and_student(phone)
     if not loaded: return default_state()
     user, student = loaded
@@ -192,21 +286,51 @@ def toggle_timer(phone: str, summary: str) -> dict:
             db.execute("INSERT INTO weeks(student_name,week_key,progress,running_start) VALUES(?,?,?,?) ON CONFLICT(student_name,week_key) DO UPDATE SET running_start=excluded.running_start", (name, current_week_key(), "", now_ms))
             db.commit(); return {"action": "started", "discarded": False, "records": []}
         if not summary: raise ValueError("结束打卡前请填写本次学习内容")
-        start_ms = int(active[1]); db.execute("UPDATE weeks SET running_start=NULL WHERE student_name=?", (name,))
-        records = []
-        if now_ms - start_ms >= 60_000:
-            cursor = start_ms
-            while cursor < now_ms:
-                moment = datetime.fromtimestamp(cursor / 1000, SHANGHAI_TZ)
-                key = current_week_key(moment)
-                monday = moment.replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=moment.weekday())
-                end = min(now_ms, int((monday + timedelta(days=7)).timestamp() * 1000))
-                rid = "record-" + secrets.token_urlsafe(16)
-                db.execute("INSERT OR IGNORE INTO weeks(student_name,week_key,progress,running_start) VALUES(?,?,?,NULL)", (name, key, ""))
-                db.execute("INSERT INTO time_records VALUES(?,?,?,?,?,?,?)", (rid, name, key, cursor, end, 0, summary[:500]))
-                records.append({"id": rid, "start": cursor, "end": end, "manual": False, "summary": summary[:500]}); cursor = end
+        week_key = str(active[0])
+        start_ms = int(active[1])
+        result = _pause_running_row(db, name, week_key, start_ms, now_ms, summary)
         db.commit()
-        return {"action": "stopped", "discarded": now_ms - start_ms < 60_000, "records": records}
+        return {
+            "action": "stopped",
+            "discarded": result["discarded"],
+            "records": result["records"],
+            "autoPaused": now_ms - start_ms >= MAX_TIMER_DURATION_MS,
+        }
+
+
+def pause_timer(phone: str, summary: str = "", reason: str = "page_exit") -> dict:
+    """Pause an active timer without starting one when no timer is running."""
+    loaded = read_user_and_student(phone)
+    if not loaded:
+        raise LookupError("student unauthorized")
+    name = loaded[0]["name"]
+    now_ms = int(time.time() * 1000)
+    with sqlite3.connect(DB_FILE) as db:
+        init_db(db)
+        db.execute("BEGIN IMMEDIATE")
+        active = db.execute(
+            "SELECT week_key,running_start FROM weeks "
+            "WHERE student_name=? AND running_start IS NOT NULL "
+            "ORDER BY running_start DESC LIMIT 1",
+            (name,),
+        ).fetchone()
+        if not active:
+            db.commit()
+            return {"action": "paused", "discarded": False, "records": [], "alreadyPaused": True}
+        start_ms = int(active[1])
+        automatic_summary = (
+            MAX_DURATION_PAUSE_SUMMARY
+            if reason == "max_duration" or now_ms - start_ms >= MAX_TIMER_DURATION_MS
+            else (summary.strip() or PAGE_EXIT_PAUSE_SUMMARY)
+        )
+        result = _pause_running_row(db, name, str(active[0]), start_ms, now_ms, automatic_summary)
+        db.commit()
+        return {
+            "action": "paused",
+            "discarded": result["discarded"],
+            "records": result["records"],
+            "autoPaused": automatic_summary == MAX_DURATION_PAUSE_SUMMARY,
+        }
 
 
 def b64(value: bytes) -> str:
@@ -1079,6 +1203,7 @@ class CheckinHandler(SimpleHTTPRequestHandler):
         if parsed.path == "/api/session":
             token = auth_header(self.headers)
             phone = user_from_token(token)
+            pause_overdue_timers()
             loaded = read_user_and_student(phone) if phone else None
             if not loaded:
                 self.send_json({"error": "请重新登录"}, 401)
@@ -1269,6 +1394,30 @@ class CheckinHandler(SimpleHTTPRequestHandler):
                 self.send_json({"error": str(error)}, 400); return
             except LookupError:
                 self.send_json({"error": "student unauthorized"}, 401); return
+            self.send_json({
+                "ok": True,
+                **result,
+                "state": response_state,
+            })
+            return
+
+        if parsed.path == "/api/student/pause-timer":
+            token = auth_header(self.headers)
+            phone = user_from_token(token)
+            if not phone:
+                self.send_json({"error": "student unauthorized"}, 401)
+                return
+            reason = str(payload.get("reason", "page_exit")).strip()
+            if reason not in {"page_exit", "max_duration"}:
+                reason = "page_exit"
+            summary = str(payload.get("summary", "")).strip()[:500]
+            try:
+                with DATA_LOCK:
+                    result = pause_timer(phone, summary, reason)
+                    response_state = scoped_state(phone)
+            except LookupError:
+                self.send_json({"error": "student unauthorized"}, 401)
+                return
             self.send_json({
                 "ok": True,
                 **result,

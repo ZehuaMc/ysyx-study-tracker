@@ -1652,6 +1652,7 @@
     const AUTH_TOKEN_KEY = "scau_ysyx_auth_token_v1";
     const ADMIN_TOKEN_KEY = "scau_ysyx_admin_token_v1";
     const WEEKLY_TARGET_MS = 15 * 60 * 60 * 1000;
+    const MAX_TIMER_MS = 5 * 60 * 60 * 1000;
     const $ = (id) => document.getElementById(id);
     const STICKER_ORIGIN = "https://h-0528.github.io";
 
@@ -1774,6 +1775,7 @@ function syncStickerState() {
     let syncPending = false;
     let sharedStateRevision = 0;
     let timerRequestPending = false;
+    let lifecyclePausePromise = null;
     let previousWeeklyTotalMs = null;
     let apiOnline = window.location.protocol !== "file:" ? null : false;
 
@@ -1821,6 +1823,84 @@ function syncStickerState() {
 
     function sharedApiEnabled() {
       return window.location.protocol !== "file:";
+    }
+
+    function lifecycleAuthToken() {
+      // A page can be hidden while the saved session is still restoring.
+      return authToken || (sessionRestoring ? savedAuthToken : "");
+    }
+
+    function lifecycleStudent() {
+      const name = currentUser || activeStudent || state.currentUser || state.activeStudent;
+      return name ? ensureStudent(name) : null;
+    }
+
+    function pauseLocalTimer(reason) {
+      const student = lifecycleStudent();
+      const active = activeTimerForStudent(student);
+      if (!student || !active) return false;
+      const end = Math.min(Date.now(), active.runningStart + MAX_TIMER_MS);
+      const summary = reason === "max_duration" ? "连续计时达到5小时自动暂停" : "离开网页自动暂停";
+      if (end - active.runningStart >= 60000) {
+        appendLocalTimedSession(student, active.runningStart, end, summary);
+      }
+      student.weeks[active.weekKey] = normalizeWeekData(student.weeks[active.weekKey]);
+      student.weeks[active.weekKey].runningStart = null;
+      saveState();
+      return true;
+    }
+
+    function pauseTimerForLifecycle(reason = "page_exit") {
+      if (lifecyclePausePromise) return lifecyclePausePromise;
+      const token = lifecycleAuthToken();
+      const student = lifecycleStudent();
+      const active = activeTimerForStudent(student);
+      if (!active && !(sharedApiEnabled() && token)) return Promise.resolve(false);
+
+      if (!sharedApiEnabled() || !token) {
+        return Promise.resolve(pauseLocalTimer(reason));
+      }
+
+      timerRequestPending = true;
+      const summary = reason === "max_duration" ? "连续计时达到5小时自动暂停" : "离开网页自动暂停";
+      lifecyclePausePromise = fetch("/api/student/pause-timer", {
+        method: "POST",
+        keepalive: true,
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer " + token
+        },
+        body: JSON.stringify({ reason, summary })
+      }).then(async (response) => {
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          const error = new Error(payload.error || "自动暂停失败");
+          error.status = response.status;
+          throw error;
+        }
+        state.students = (payload.state && payload.state.students) || state.students;
+        state.users = (payload.state && payload.state.users) || state.users;
+        overviewRows = null;
+        persistLocalState();
+        if (reason === "max_duration" && document.visibilityState !== "hidden") {
+          showToast("连续计时达到5小时，已自动暂停。");
+        }
+        return true;
+      }).catch((error) => {
+        // The browser may terminate a keepalive request during navigation.
+        if (error.status === 401 && document.visibilityState !== "hidden") {
+          clearUserSession();
+          showToast("登录已失效，请重新登录。");
+        } else {
+          console.warn("自动暂停请求失败", error);
+        }
+        return false;
+      }).finally(() => {
+        lifecyclePausePromise = null;
+        timerRequestPending = false;
+        if (document.visibilityState !== "hidden" && authToken) render();
+      });
+      return lifecyclePausePromise;
     }
 
     function resetUserIdentity() {
@@ -3258,7 +3338,9 @@ previousWeeklyTotalMs = totalMs;
     els.showRegisterButton.addEventListener("click", () => setStudentAuthMode("register"));
     els.registerButton.addEventListener("click", registerUser);
     els.cancelRegisterButton.addEventListener("click", () => setStudentAuthMode("login"));
-    els.logoutButton.addEventListener("click", () => {
+    els.logoutButton.addEventListener("click", async () => {
+      els.logoutButton.disabled = true;
+      await pauseTimerForLifecycle("page_exit");
       clearUserSession();
       showToast("已退出登录。");
     });
@@ -3469,6 +3551,11 @@ previousWeeklyTotalMs = totalMs;
     window.setInterval(() => {
       const week = activeStudent ? currentWeekData() : newWeekData();
       const student = activeStudent ? state.students[activeStudent] : null;
+      const owner = lifecycleStudent();
+      const ownerActive = activeTimerForStudent(owner);
+      if (ownerActive && Date.now() - ownerActive.runningStart >= MAX_TIMER_MS) {
+        pauseTimerForLifecycle("max_duration");
+      }
       if (activeTimerForStudent(student)) renderTime(week);
     }, 1000);
 
@@ -3477,13 +3564,11 @@ previousWeeklyTotalMs = totalMs;
       if (adminToken) loadAdminExport(adminSort);
     }, 15000);
 
-    window.addEventListener("beforeunload", (event) => {
-      const student = activeStudent ? state.students[activeStudent] : null;
-      if (activeTimerForStudent(student)) {
-        event.preventDefault();
-        event.returnValue = "当前学习计时仍在进行，确定要离开吗？";
-      }
-    });
+    function pauseOnPageExit() {
+      pauseTimerForLifecycle("page_exit");
+    }
+
+    window.addEventListener("pagehide", pauseOnPageExit);
     document.addEventListener(
   "pointerdown",
   (event) => {
