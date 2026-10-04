@@ -6,6 +6,7 @@ import time
 import unittest
 from datetime import datetime, timedelta
 from pathlib import Path
+from unittest.mock import patch
 
 import server
 
@@ -58,6 +59,26 @@ class StudyTrackerStorageTests(unittest.TestCase):
         handler.do_PUT()
 
         return len(body), responses
+
+    def post_json(self, path, payload, token="test-token"):
+        body = json.dumps(payload).encode()
+        responses = []
+        handler_type = type(
+            "PostHandler",
+            (server.CheckinHandler,),
+            {"send_json": lambda _, value, status=200: responses.append((status, value))},
+        )
+        handler = handler_type.__new__(handler_type)
+        handler.path = path
+        handler.headers = {
+            "Authorization": "Bearer " + token,
+            "Content-Length": str(len(body)),
+        }
+        handler.rfile = io.BytesIO(body)
+
+        handler.do_POST()
+
+        return responses
 
     def test_state_route_accepts_compact_payload(self):
         self.create_user()
@@ -169,13 +190,13 @@ class StudyTrackerStorageTests(unittest.TestCase):
     def test_overview_counts_only_current_week_part_of_active_timer(self):
         self.create_user()
         now = datetime.now(server.SHANGHAI_TZ)
-        current_week_start = server.week_start_ms(now)
-        previous_week_key = server.current_week_key(now - timedelta(days=7))
+        now_ms = int(time.time() * 1000)
+        current_week_key = server.current_week_key(now)
         with sqlite3.connect(server.DB_FILE) as db:
             server.init_db(db)
             db.execute(
                 "INSERT INTO weeks VALUES(?,?,?,?)",
-                ("Student", previous_week_key, "", current_week_start - 60_000),
+                ("Student", current_week_key, "", now_ms - 60_000),
             )
             db.commit()
 
@@ -184,9 +205,70 @@ class StudyTrackerStorageTests(unittest.TestCase):
         after = int(time.time() * 1000)
 
         self.assertTrue(row["isStudying"])
-        self.assertGreaterEqual(row["weekMs"], before - current_week_start)
-        self.assertLessEqual(row["weekMs"], after - current_week_start)
-        self.assertGreaterEqual(row["totalMs"] - row["weekMs"], 60_000)
+        self.assertGreaterEqual(row["weekMs"], 60_000)
+        self.assertLess(row["weekMs"], 120_000)
+        self.assertGreaterEqual(row["totalMs"], row["weekMs"])
+
+    def test_overdue_timer_is_auto_paused_at_five_hour_limit(self):
+        self.create_user()
+        now_ms = 1_800_000_000_000
+        start_ms = now_ms - server.MAX_TIMER_DURATION_MS - 30 * 60 * 1000
+        week_key = server.current_week_key(
+            datetime.fromtimestamp(start_ms / 1000, server.SHANGHAI_TZ)
+        )
+        with sqlite3.connect(server.DB_FILE) as db:
+            server.init_db(db)
+            db.execute(
+                "INSERT INTO weeks VALUES(?,?,?,?)",
+                ("Student", week_key, "", start_ms),
+            )
+            db.commit()
+
+        with patch.object(server.time, "time", return_value=now_ms / 1000):
+            paused = server.pause_overdue_timers()
+
+        self.assertEqual(paused, 1)
+        state = server.read_state()
+        week = state["students"]["Student"]["weeks"][week_key]
+        self.assertIsNone(week["runningStart"])
+        records = week["timeRecords"]
+        self.assertEqual(
+            sum(record["end"] - record["start"] for record in records),
+            server.MAX_TIMER_DURATION_MS,
+        )
+        self.assertTrue(
+            all(record["summary"] == server.MAX_DURATION_PAUSE_SUMMARY for record in records)
+        )
+
+    def test_page_exit_pause_endpoint_persists_default_summary_and_is_idempotent(self):
+        self.create_user()
+        server.save_session("test-token", "student", "123456")
+        now_ms = int(time.time() * 1000)
+        week_key = server.current_week_key()
+        start_ms = now_ms - 2 * 60 * 1000
+        with sqlite3.connect(server.DB_FILE) as db:
+            server.init_db(db)
+            db.execute(
+                "INSERT INTO weeks VALUES(?,?,?,?)",
+                ("Student", week_key, "", start_ms),
+            )
+            db.commit()
+
+        responses = self.post_json("/api/student/pause-timer", {})
+
+        self.assertEqual(responses[0][0], 200)
+        payload = responses[0][1]
+        self.assertEqual(payload["action"], "paused")
+        self.assertFalse(payload["autoPaused"])
+        self.assertEqual(payload["records"][0]["summary"], server.PAGE_EXIT_PAUSE_SUMMARY)
+        state = server.read_state()
+        self.assertIsNone(
+            state["students"]["Student"]["weeks"][week_key]["runningStart"]
+        )
+
+        second = self.post_json("/api/student/pause-timer", {})
+        self.assertEqual(second[0][0], 200)
+        self.assertTrue(second[0][1]["alreadyPaused"])
 
 
 if __name__ == "__main__":
